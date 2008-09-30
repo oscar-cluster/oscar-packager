@@ -1,0 +1,131 @@
+<!DOCTYPE article PUBLIC " -//OASIS//DTD DocBook V3.1//EN" "http://oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+
+<article class="whitepaper" id="documentation" lang="en">
+
+<artheader> <title>OSCAR Packager Manual</title>
+
+<author>
+
+<firstname>Geoffroy</firstname>
+<surname>Vallee</surname>
+
+<affiliation>
+<address><email>valleegr@ornl.gov</email></address>
+</affiliation>
+</author>
+
+</artheader>
+
+<sect1><title>Introduction</title>
+
+<para>
+  OSCAR is based on binary packages: both the OSCAR core and OSCAR packages are
+  shipped and managed via binary packages. Those binary packages have to be
+  generated for all new supported Linux distribution (module architecture 
+  independent binary package on Linux distributions having the same
+  configuration). oscar-packager aims to ease the creation of those binary
+  packages, generating them automatically for the local platform.
+</para>
+
+</sect1>
+
+<sect1><title>Access to Source Code</title>
+  <para>
+    The generation of binary packages require the access to the source code of
+    the software that needs to be packaged. The source code may be available in
+    many different ways: tarballs, svn check-out, SRPMs. Since OSCAR components
+    use those different methods of source code distribution, oscar-packager must
+    hide those details to the packager and deal with this different
+    configuration.
+  </para>
+  <para>
+    Because OSCAR is two kinds of components, core components and OSCAR
+    packages, it is convenient to be able to compile one those groups of
+    packages or both of them at the same time. Moreover, one may want to compile
+    the stable version of the OSCAR components, others may want to compile the
+    unstable (development) version.
+    To do that, four configuration files are available:
+    <orderedlist>
+      <listitem>
+        Two configuration files for core packages: one for the stable version
+        and one for the unstable version.
+      </listitem>
+      <listitem>
+        Two configuration files for OPKGs:  one for the stable version
+        and one for the unstable version.
+      </listitem>
+    </orderedlist>
+    Those configuration files describe how to access the source code of the
+    OSCAR component to compile. The following example specifies that the stable
+    version of ODA is available via SVN, at a specific URL:
+    <programlisting>
+      <![CDATA[
+[oda]
+source  = svn,http://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/oda/tags/oda-1.3
+              ]]>
+    </programlisting>
+  </para>
+  <para>
+    <emphasis>
+      oscar-packager does not aim to implement the policy regarding the storage
+      of code source (for instance to guarantee we can repackage any release of
+      OSCAR at any time). oscar-packager is only a simple tool that aims to
+      enable the automatic generation of binary packages for OSCAR based on a
+      description (though configuration files) of the location of the source
+      code and the method to use for the actual creation of the binary packages.
+    </emphasis>
+  </para>
+</sect1>
+
+<sect1><title>Automatic Generation of Binary Packages</title>
+  <para>
+    Once we have access to the source code, we need to know how to generate the
+    binary packages. Typically, we need to:
+    <orderedlist>
+      <listitem>
+        know the dependencies required for the creation of the binary package,
+      </listitem>
+      <listitem>
+        specify some environment variables needed for the creation of the binary
+        package,
+      </listitem>
+      <listitem>
+        where to save the binary packages (the location is different for
+        architecture independent and architecture dependent binary packages).
+      </listitem>
+    </orderedlist>
+    To specify this data, each OSCAR component must provide a 
+    <emphasis>build.cfg</emphasis> file. This capability is actually from a
+    previous effort, initiated by Erich Focht from NEC Europe; we only extend it
+    for the support of Debian packages.
+  </para>
+  <para>
+    With this data, it is possible to generate the binary packages: 
+    oscar-packager gets the source code, parse the build.cfg file and finally
+    execute the command for the creation of the binary package. For that,
+    oscar-oackages automatically detect the binary package format of the local
+    Linux distribution.
+  </para>
+</sect1>
+
+<sect1>
+  <title>
+    Generation of a Local Repository for the Storage of Generated Binary
+    Packages
+  </title>
+
+  <para>
+    In order to ease the usage of the generated binary packages, those binary
+    packages are automatically copied into a local repository. This local 
+    repository is the standard OSCAR repositories, i.e., the different 
+    repositories available in <emphasis>/tftpboot/distro</emphasis> and
+    <emphasis>/tftpboot/oscar</emphasis>.
+  </para>
+  <para>
+    !!WARNING!! Even if the repositories are fully functional, they won't be
+    necessarly used by default by OSCAR, you MUST check the repository 
+    configuration files.
+  </para>
+</sect1>
+
+</article>

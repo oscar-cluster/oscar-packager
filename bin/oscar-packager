@@ -1,0 +1,103 @@
+#!/usr/bin/perl
+#
+
+use strict;
+use Getopt::Long;
+use OSCAR::Utils;
+use OSCAR::ConfigFile;
+use File::Path;
+use Carp;
+use warnings "all";
+
+my ($stable, $unstable, $verbose);
+
+our $packaging_dir = "/tmp/oscar-packager";
+
+Getopt::Long::Configure("pass_through");
+GetOptions(
+        "stable"                        => \$stable,
+        "unstable"                      => \$unstable,
+        "verbose"                       => \$verbose,
+        "v"                             => \$verbose,
+        "help"                          => \&help_and_exit,
+        ) || help_and_die();
+
+sub pkgdir_cleanup () {
+    if (-d $packaging_dir) {
+        print "Removing $packaging_dir\n" if $verbose;
+        File::Path::rmtree ($packaging_dir);
+    }
+    if (-d $packaging_dir) {
+        carp "ERROR: Impossible to remove $packaging_dir";
+        return -1;
+    }
+    mkdir ($packaging_dir);
+    return 0;
+}
+
+sub package_oscar ($) {
+    my $config_file = shift;
+
+    #
+    # We clean-up the directory where we create the packages
+    #
+    pkgdir_cleanup ();
+
+    #
+    # We parse the config file.
+    #
+    print "Parsing $config_file...\n" if $verbose;
+    my @cpts = OSCAR::ConfigFile::get_block_list ($config_file);
+    OSCAR::Utils::print_array (@cpts) if $verbose;
+
+    my $cmd;
+    foreach my $c (@cpts) {
+        my $source = OSCAR::ConfigFile::get_value ($config_file, $c, "source");
+        my ($method, $url) = split (",", $source);
+        if ($method eq "svn") {
+            # We check out SVN
+            $cmd = "cd $packaging_dir; svn co $url $c";
+            print "Executing: $cmd\n" if $verbose;
+            system $cmd;
+
+            # We compile
+            $cmd = "cd $packaging_dir/$c; make deb";
+            print "Executing: $cmd\n" if $verbose;
+            system $cmd;
+        } else {
+            carp "ERROR: Unknow method to access source ($method)";
+            return -1;
+        }
+    }
+
+    print "\n\nGenerated binary packages are in $packaging_dir\n";
+
+    return 0;
+}
+
+sub help () {
+    print "Help: Not yet implemented\n";
+}
+
+sub help_and_die {
+    help ();
+    exit 1;
+}
+
+sub help_and_exit {
+    help ();
+    exit 0;
+}
+
+my $config_file_path = "/etc/oscar/oscar-packager";
+if ($stable) {
+    my $stable_config_file = "$config_file_path/stable.cfg";
+    package_oscar ($stable_config_file);
+}
+
+if ($unstable) {
+    my $unstable_config_file = "$config_file_path/unstable.cfg";
+    package_oscar ($unstable_config_file);
+}
+
+exit 0;
