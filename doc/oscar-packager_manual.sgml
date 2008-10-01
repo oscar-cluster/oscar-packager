@@ -128,4 +128,34 @@ source  = svn,http://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/oda/tags/od
   </para>
 </sect1>
 
+<sect1><title>Scripts for Binary Package Creation Before OSCAR-5.2</title>
+
+<para>
+  <itemizedlist>
+    <listitem>
+      build_all_rpms: build binary package for all OPKGs (not including the
+      meta-packages
+    </listitem>
+    <listitem>
+      build_opkg_rpms: create the meta-packages for a given list of OPKGs
+    </listitem>
+    <listitem>
+      build_oscar_rpms: create all binary packages (except meta-packages) for a
+      given list of OPKGs, and install them in local repositories.
+      This script is based on a build.cfg file that describes how to prepare the
+      system for the creation of binary packages and how to create those binary 
+      packages.
+    </listitem>
+    <listitem>
+      build_rpms: Script for building RPMs and SRPMS from a source tree
+      directory and a spec file.
+    </listitem>
+  </itemizedlist>
+</para>
+
+<para>
+build_all_rpms calls build_oscar_rpms and build_oscar_rpms calls build_rpms at the back-end
+</para>
+</sect1>
+
 </article>
