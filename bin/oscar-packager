@@ -76,7 +76,7 @@ sub package_oscar ($) {
 }
 
 sub help () {
-    print "Help: Not yet implemented\n";
+    print "Please execute the 'man oscar-packager' command\n";
 }
 
 sub help_and_die {
@@ -91,7 +91,7 @@ sub help_and_exit {
 
 my $config_file_path = "/etc/oscar/oscar-packager";
 if ($stable) {
-    my $stable_config_file = "$config_file_path/stable.cfg";
+    my $stable_config_file = "$config_file_path/core_stable.cfg";
     package_oscar ($stable_config_file);
 }
 
@@ -101,3 +101,43 @@ if ($unstable) {
 }
 
 exit 0;
+
+__END__
+
+=head1 NAME
+
+oscar-packager, a script for the creation of binary packages (Debian or RPM
+packages) for the OSCAR core.
+The script is based on a configuration file ('/etc/oscar/oscar-packager/'),
+which includes different configuration files for different OSCAR release (i.e.,
+stable, unstable).
+
+=head1 SYNOPSIS
+
+oscar-packager OPTIONS
+
+=head1 OPTIONS
+
+Recognized options include:
+
+=over 8
+
+=item --stable
+
+Package the latest OSCAR release.
+
+=item --unstable
+
+Package OSCAR unstable (i.e., the OSCAR SVN trunk).
+
+=item --verbose|-v
+
+Fall back to the verbose mode of execution for debugging purpose.
+
+=back
+
+=head1 AUTHOR
+
+Geoffroy Vallee, Oak Ridge National Laboratory <valleegr at ornl dot gov>
+
+=cut
