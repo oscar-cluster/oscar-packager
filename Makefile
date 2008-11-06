@@ -2,7 +2,7 @@ DESTDIR=
 
 include ./Config.mk
 
-SUBDIRS := bin doc etc lib
+SUBDIRS := bin doc etc 
 
 all:
 	for dir in ${SUBDIRS} ; do ( cd $$dir ; ${MAKE} all ) ; done
@@ -14,6 +14,7 @@ uninstall:
 	for dir in ${SUBDIRS} ; do ( cd $$dir ; ${MAKE} uninstall ) ; done
 
 clean:
+	@rm -f *~
 	@rm -f build-stamp configure-stamp
 	@rm -rf debian/oscar-packager
 	@rm -f oscar-packager.tar.gz
