@@ -5,6 +5,7 @@ use strict;
 use Getopt::Long;
 use OSCAR::Utils;
 use OSCAR::ConfigFile;
+use OSCAR::OCA::OS_Detect;
 use File::Path;
 use Carp;
 use warnings "all";
@@ -40,6 +41,14 @@ sub package_oscar ($) {
     my @failed_comp;
 
     #
+    # First we check what is the underlying packaging system (RPM vs. Deb)
+    #
+    my $os = OSCAR::OCA::OS_Detect::open();
+    if (!defined $os) {
+        die "ERROR: Impossible to detect the binary package format";
+    }
+
+    #
     # We clean-up the directory where we create the packages
     #
     pkgdir_cleanup ();
@@ -62,7 +71,20 @@ sub package_oscar ($) {
             system $cmd;
 
             # We compile
-            $cmd = "cd $packaging_dir/$c; make deb";
+            $cmd = "cd $packaging_dir/$c; ";
+            my $build_cmd = OSCAR::ConfigFile::get_value ($config_file,
+                                                          $c,
+                                                          "precommand");
+            if (defined ($build_cmd)) {
+                $cmd .= "$build_cmd && ";
+            }
+            if ($os->{pkg} eq "deb") {
+                $cmd .= "make deb";
+            } elsif ($os->{pkg} eq "rpm") {
+                $cmd .= "make rpm";
+            } else {
+                die "ERROR: Unknow binary package format ($os->{pkg})";
+            }
             print "Executing: $cmd\n" if $verbose;
             if (system ($cmd)) {
                 print "[INFO] Impossible to build $c ($cmd)\n" if $verbose;
@@ -109,7 +131,7 @@ if (! -f $config_file) {
 my @failed_comp = package_oscar ($config_file);
 if (scalar (@failed_comp) > 0) {
     print "Errors occured during the OSCAR packages.\n".
-          "OSCAR components that failed are:";
+          "OSCAR components that failed are: ";
     OSCAR::Utils::print_array (@failed_comp);
 }
 
