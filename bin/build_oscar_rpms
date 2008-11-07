@@ -81,7 +81,7 @@
 #
 # This translates to following steps:
 # - install php-devel requirement
-# - build packages resulting from the rrdtool srpm and install them into
+# - build packages resulting from the rrdtool srpm and copy them into
 #   distro/$distro$ver-$arch/
 # - install all rpms starting with rrdtool belonging to the ganglia opkg
 # - build rpms out of the srpm matching the string ganglia-3* and install

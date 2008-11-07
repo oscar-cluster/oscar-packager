@@ -1,6 +1,6 @@
 1.0 (not yet released):
 - Initial release.
-- Allows the creation of binary packages for OSCAR core on both RPM and Debian
-based systems.
+- Allows the creation of binary packages for OSCAR core (stable and unstable)
+on both RPM and Debian based systems.
 - Allows the creation of binary packages for OSCAR OPKGs on both RPM and
 Debian based systems.

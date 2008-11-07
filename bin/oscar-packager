@@ -37,6 +37,7 @@ sub pkgdir_cleanup () {
 
 sub package_oscar ($) {
     my $config_file = shift;
+    my @failed_comp;
 
     #
     # We clean-up the directory where we create the packages
@@ -63,16 +64,19 @@ sub package_oscar ($) {
             # We compile
             $cmd = "cd $packaging_dir/$c; make deb";
             print "Executing: $cmd\n" if $verbose;
-            system $cmd;
+            if (system ($cmd)) {
+                print "[INFO] Impossible to build $c ($cmd)\n" if $verbose;
+                push (@failed_comp, $c);
+            }
         } else {
             carp "ERROR: Unknow method to access source ($method)";
-            return -1;
+            return undef;
         }
     }
 
     print "\n\nGenerated binary packages are in $packaging_dir\n";
 
-    return 0;
+    return @failed_comp;
 }
 
 sub help () {
@@ -90,14 +94,23 @@ sub help_and_exit {
 }
 
 my $config_file_path = "/etc/oscar/oscar-packager";
+my $config_file;
 if ($stable) {
-    my $stable_config_file = "$config_file_path/core_stable.cfg";
-    package_oscar ($stable_config_file);
+    $config_file = "$config_file_path/core_stable.cfg";
 }
 
 if ($unstable) {
-    my $unstable_config_file = "$config_file_path/unstable.cfg";
-    package_oscar ($unstable_config_file);
+    $config_file = "$config_file_path/core_unstable.cfg";
+}
+
+if (! -f $config_file) {
+    die "ERROR: Impossible to find the configuration file ($config_file)";
+}
+my @failed_comp = package_oscar ($config_file);
+if (scalar (@failed_comp) > 0) {
+    print "Errors occured during the OSCAR packages.\n".
+          "OSCAR components that failed are:";
+    OSCAR::Utils::print_array (@failed_comp);
 }
 
 exit 0;
