@@ -18,82 +18,6 @@
 #
 # (C)opyright Erich Focht <efocht@hpce.nec.com>
 #             All rights reserved
-##############################################################################
-# This tool is provided AS IS with no support.
-#
-#
-# Based on a distro-aware configuration file this tool builds RPMs for OSCAR
-# packages and prerequisites and stores them into the generic-setup compliant
-# location (either distro/common-rpms/ or distro/$distro$version-$arch/)
-#
-# The configuration file allows the specification of build requirements, they
-# will be installed with yume and removed after the package build.
-#
-# You will need to install yume manually and configure the default distro package
-# pool manually (yume --repo /tftpboot/distro/$distro-$version-$arch --prepare)
-# in order to be able to install requirements and dependencies.
-#
-# You will need to copy the build_rpms tool into the scripts/ directory
-# before using this tool. It is used for building RPMs out of the SRPMs.
-#
-# CONFIGURATION:
-# -------------
-# This tool requires a configuration file called build.cfg to be located
-# in the SRPMS directory of the package. It's format is somewhat similar to
-# the prereq.cfg file:
-#
-# 
-# [distro:version:architecture]
-# 
-# # install pkg1 belonging to opkg before building
-# requires: opkg:pkg1
-# common: srpm_name [additional_rpmbuild_options]
-# env: SGE_ROOT=/opt/sge
-# srpm_name 
-# ...
-#
-# [distro2:version:architecture]
-# ...
-#
-# The distro name, version or arch info can contain a "*". This matches
-# like a .* regexp. The distro names are the "compat" names!!!
-# Examples:
-# [rh*:3:*]     matches all rhel3 architectures.
-# [fc:*:*]      matches all fedora core distros on all architectures
-# [md*:*:*]     matches both mdk and mdv
-# [*:*:*]       matches everything.
-#
-#
-# A configuration block can contain multiple "requires:" lines. This gives
-# us a chance to use build requires from inside the same opkg. The config
-# file will be executed in pieces split by the "requires:" lines.
-# For example: the ganglia package requires rrdtool-devel for building,
-# a package included into the ganglia opkg. Therefore the ganglia rpms will
-# be built with the following configuration file:
-#
-# [*:*:*]
-# requires: php-devel
-# rrdtool-1.0.49-2.rf.src.rpm
-# requires: ganglia:rrdtool*
-# ganglia-3
-# env: MYENV_VAR=/blah
-# common: ganglia-web-3
-#
-# This translates to following steps:
-# - install php-devel requirement
-# - build packages resulting from the rrdtool srpm and copy them into
-#   distro/$distro$ver-$arch/
-# - install all rpms starting with rrdtool belonging to the ganglia opkg
-# - build rpms out of the srpm matching the string ganglia-3* and install
-#   them into the directory distro/$distro$ver-$arch/
-# - set the environment variables specified on the env: line
-# - build the common rpms resulting from the srpm matching "ganglia-web-3*"
-#   and install them into the distro/common-rpms/ directory.
-#
-# - after the block was executed, attempt to remove the requires which were
-#   installed 
-#
-##########################################################################
 
 use strict;
 use Cwd;
@@ -524,3 +448,91 @@ sub get_config {
 	return undef;
     }
 }
+
+__END__
+
+=head1 DESCRIPTION
+
+Based on a distro-aware configuration file this tool builds RPMs for OSCAR
+packages and prerequisites and stores them into the generic-setup compliant
+location (either distro/common-rpms/ or distro/$distro$version-$arch/)
+
+The configuration file allows the specification of build requirements, they
+will be installed with yume and removed after the package build.
+
+You will need to install yume manually and configure the default distro package
+pool manually (yume --repo /tftpboot/distro/$distro-$version-$arch --prepare)
+in order to be able to install requirements and dependencies.
+
+You will need to copy the build_rpms tool into the scripts/ directory
+before using this tool. It is used for building RPMs out of the SRPMs.
+
+=head1 CONFIGURATION
+
+This tool requires a configuration file called build.cfg to be located
+in the SRPMS directory of the package. It's format is somewhat similar to
+the prereq.cfg file:
+
+
+[distro:version:architecture]
+
+# install pkg1 belonging to opkg before building
+requires: opkg:pkg1
+common: srpm_name [additional_rpmbuild_options]
+env: SGE_ROOT=/opt/sge
+srpm_name 
+...
+
+[distro2:version:architecture]
+...
+
+The distro name, version or arch info can contain a "*". This matches
+like a .* regexp. The distro names are the "compat" names!!!
+Examples:
+[rh*:3:*]     matches all rhel3 architectures.
+[fc:*:*]      matches all fedora core distros on all architectures
+[md*:*:*]     matches both mdk and mdv
+[*:*:*]       matches everything.
+
+
+A configuration block can contain multiple "requires:" lines. This gives
+us a chance to use build requires from inside the same opkg. The config
+file will be executed in pieces split by the "requires:" lines.
+For example: the ganglia package requires rrdtool-devel for building,
+a package included into the ganglia opkg. Therefore the ganglia rpms will
+be built with the following configuration file:
+
+[*:*:*]
+requires: php-devel
+rrdtool-1.0.49-2.rf.src.rpm
+requires: ganglia:rrdtool*
+ganglia-3
+env: MYENV_VAR=/blah
+common: ganglia-web-3
+
+This translates to following steps:
+
+=over 4
+
+=item - install php-devel requirement
+
+=item - build packages resulting from the rrdtool srpm and copy them into   distro/$distro$ver-$arch/
+
+=item - install all rpms starting with rrdtool belonging to the ganglia opkg
+
+=item - build rpms out of the srpm matching the string ganglia-3* and install them into the directory distro/$distro$ver-$arch/
+
+=item - set the environment variables specified on the env: line
+
+=item - build the common rpms resulting from the srpm matching "ganglia-web-3*" and install them into the distro/common-rpms/ directory.
+
+=item - after the block was executed, attempt to remove the requires which were
+  installed 
+
+=back
+
+=head1 AUTHORS
+
+Erich Focht
+
+=cut
