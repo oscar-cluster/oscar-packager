@@ -3,8 +3,8 @@ DESTDIR=
 TOPDIR=..
 include $(TOPDIR)/Config.mk
 
-SCRIPTS := oscar-packager
-SUBDIRS :=
+SCRIPTS := oscar-packager build_oscar_binaries
+SUBDIRS := 
 
 doc:
 	install -d -m 0755 $(DESTDIR)/usr/local/man/man1/
