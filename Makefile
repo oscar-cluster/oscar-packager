@@ -2,7 +2,7 @@ DESTDIR=
 
 include ./Config.mk
 
-SUBDIRS := bin doc etc 
+SUBDIRS := bin doc etc lib
 
 all:
 	for dir in ${SUBDIRS} ; do ( cd $$dir ; ${MAKE} all ) ; done

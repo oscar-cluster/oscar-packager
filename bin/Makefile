@@ -3,7 +3,7 @@ DESTDIR=
 TOPDIR=..
 include $(TOPDIR)/Config.mk
 
-SCRIPTS := oscar-packager build_oscar_binaries
+SCRIPTS := oscar-packager build_rpms
 SUBDIRS := 
 
 doc:
@@ -23,3 +23,4 @@ uninstall:
 	for dir in ${SUBDIRS} ; do ( cd $$dir ; ${MAKE} uninstall ) ; done
 
 clean:
+	rm -f *~

@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 #
-# Copyright (c) 2008 Oak Ridge National Laboratory
-#                    Geoffroy Vallee <valleegr@ornl.gov>
-#                    All rights reserved
+# Copyright (c) 2008-2009 Oak Ridge National Laboratory
+#                         Geoffroy Vallee <valleegr@ornl.gov>
+#                         All rights reserved
 #
 # This file is part of the OSCAR software package.  For license
 # information, see the COPYING file in the top level directory of the
@@ -19,6 +19,7 @@ use OSCAR::Utils;
 use OSCAR::ConfigFile;
 use OSCAR::OCA::OS_Detect;
 use OSCAR::Logger;
+use OSCAR::Packager;
 use File::Path;
 use Carp;
 use warnings "all";
@@ -63,9 +64,10 @@ sub prepare_prereqs ($) {
 
     my $build_file = "$dir/build.cfg";
     if (! -f "$build_file") {
-        OSCAR::Logger::oscar_log_subsection ("No build.cfg, no prereqs needed");
+        OSCAR::Logger::oscar_log_subsection ("No $build_file, no prereqs");
     } else {
         OSCAR::Logger::oscar_log_subsection ("Managing prereqs ($build_file)");
+        OSCAR::Packager::package_opkg ($build_file);
     }
 
     return 0;
@@ -107,7 +109,7 @@ sub create_package ($) {
             system $cmd;
 
             # We check the prereqs (including dependencies with other packages)
-            if (prepare_prereqs ($packaging_dir)) {
+            if (prepare_prereqs ("$packaging_dir/$c")) {
                 carp "ERROR: Impossible to manage prereqs for the creation of ".
                      "the binary package";
                 push (@failed_comp, $c);

@@ -134,10 +134,10 @@ source  = svn,http://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/oda/tags/od
   <itemizedlist>
     <listitem>
       build_all_rpms: build binary package for all OPKGs (not including the
-      meta-packages
+      meta-packages).
     </listitem>
     <listitem>
-      build_opkg_rpms: create the meta-packages for a given list of OPKGs
+      build_opkg_rpms: create the meta-packages for a given list of OPKGs.
     </listitem>
     <listitem>
       build_oscar_rpms: create all binary packages (except meta-packages) for a
