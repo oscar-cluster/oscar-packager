@@ -437,3 +437,27 @@ sub package_opkg ($) {
     OSCAR::Logger::oscar_log_subsection "=====================================";
     return 0;
 }
+
+__END__
+
+=head1 Exported functions
+
+=over 4
+
+=item package_opkg ("/var/lib/oscar/package/c3/build.cfg");
+
+Package a given OPKG.
+
+=back
+
+=head1 AUTHORS
+
+=over 4
+
+=item Erich Fotch
+
+=item Geoffroy Vallee, Oak Ridge National Laboratory <valleegr at ornl dot gov>
+
+=back
+
+=cut

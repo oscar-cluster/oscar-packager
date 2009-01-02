@@ -249,7 +249,15 @@ Package the latest OSCAR core release.
 
 =item --core-unstable
 
-Package OSCAR unstable (i.e., the OSCAR SVN trunk).
+Package the unstable OSCAR core (i.e., the OSCAR SVN trunk) .
+
+=item --included-stable
+
+Package stable included OSCAR packages.
+
+=item --included-unstable
+
+Package the instable version of included OSCAR packages.
 
 =item --verbose|-v
 
