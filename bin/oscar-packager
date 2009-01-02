@@ -18,26 +18,30 @@ use Getopt::Long;
 use OSCAR::Utils;
 use OSCAR::ConfigFile;
 use OSCAR::OCA::OS_Detect;
+use OSCAR::Logger;
 use File::Path;
 use Carp;
 use warnings "all";
 
-my ($stable, $unstable, $verbose);
+my ($stable, $unstable, $included_stable, $included_unstable, $verbose, $debug);
 
 our $packaging_dir = "/tmp/oscar-packager";
 
 Getopt::Long::Configure("pass_through");
 GetOptions(
-        "stable"                        => \$stable,
-        "unstable"                      => \$unstable,
-        "verbose"                       => \$verbose,
-        "v"                             => \$verbose,
-        "help"                          => \&help_and_exit,
+        "core-stable"                       => \$stable,
+        "core-unstable"                     => \$unstable,
+        "included-stable"                   => \$included_stable,
+        "included-unstable"                 => \$included_unstable,
+        "verbose"                           => \$verbose,
+        "debug"                             => \$debug,
+        "v"                                 => \$verbose,
+        "help"                              => \&help_and_exit,
         ) || help_and_die();
 
 sub pkgdir_cleanup () {
     if (-d $packaging_dir) {
-        print "Removing $packaging_dir\n" if $verbose;
+        OSCAR::Logger::oscar_log_subsection "Removing $packaging_dir";
         File::Path::rmtree ($packaging_dir);
     }
     if (-d $packaging_dir) {
@@ -48,7 +52,26 @@ sub pkgdir_cleanup () {
     return 0;
 }
 
-sub package_oscar ($) {
+# This function deals with prereqs for the packaging of a given OSCAR 
+# component. The management of prereqs is based on a build.cfg file at the top
+# directory of the OSCAR component source tree. If the file does not exist, we
+# assume there is no prereq to deal with.
+#
+# Return: -1 if error, 0 else.
+sub prepare_prereqs ($) {
+    my $dir = shift;
+
+    my $build_file = "$dir/build.cfg";
+    if (! -f "$build_file") {
+        OSCAR::Logger::oscar_log_subsection ("No build.cfg, no prereqs needed");
+    } else {
+        OSCAR::Logger::oscar_log_subsection ("Managing prereqs ($build_file)");
+    }
+
+    return 0;
+}
+
+sub create_package ($) {
     my $config_file = shift;
     my @failed_comp;
 
@@ -68,7 +91,7 @@ sub package_oscar ($) {
     #
     # We parse the config file.
     #
-    print "Parsing $config_file...\n" if $verbose;
+    OSCAR::Logger::oscar_log_subsection "Parsing $config_file...";
     my @cpts = OSCAR::ConfigFile::get_block_list ($config_file);
     OSCAR::Utils::print_array (@cpts) if $verbose;
 
@@ -78,9 +101,17 @@ sub package_oscar ($) {
         my ($method, $url) = split (",", $source);
         if ($method eq "svn") {
             # We check out SVN
-            $cmd = "cd $packaging_dir; svn co $url $c";
-            print "Executing: $cmd\n" if $verbose;
+            $cmd = "cd $packaging_dir; svn co $url $c ";
+            $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+            OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             system $cmd;
+
+            # We check the prereqs (including dependencies with other packages)
+            if (prepare_prereqs ($packaging_dir)) {
+                carp "ERROR: Impossible to manage prereqs for the creation of ".
+                     "the binary package";
+                push (@failed_comp, $c);
+            }
 
             # We compile
             $cmd = "cd $packaging_dir/$c; ";
@@ -92,23 +123,28 @@ sub package_oscar ($) {
             }
             if ($os->{pkg} eq "deb") {
                 $cmd .= "make deb";
+                $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             } elsif ($os->{pkg} eq "rpm") {
                 $cmd .= "make rpm";
+                $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             } else {
                 die "ERROR: Unknow binary package format ($os->{pkg})";
             }
-            print "Executing: $cmd\n" if $verbose;
+            OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             if (system ($cmd)) {
-                print "[INFO] Impossible to build $c ($cmd)\n" if $verbose;
+                OSCAR::Logger::oscar_log_subsection "[INFO] Impossible to ".
+                    "build $c ($cmd)";
                 push (@failed_comp, $c);
             }
         } else {
-            carp "ERROR: Unknow method to access source ($method)";
-            return undef;
+            OSCAR::Logger::oscar_log_subsection "ERROR: Unknow method to ".
+                "access source ($method)";
+            push (@failed_comp, $c);
         }
     }
 
-    print "\n\nGenerated binary packages are in $packaging_dir\n";
+    OSCAR::Logger::oscar_log_subsection "[INFO] Generated binary packages ".
+        "are in $packaging_dir";
 
     return @failed_comp;
 }
@@ -129,23 +165,59 @@ sub help_and_exit {
 
 my $config_file_path = "/etc/oscar/oscar-packager";
 my $config_file;
+
+# We create a log file specific to oscar-packager
+my $log_file = "/var/log/oscar/oscar-packager.log";
+OSCAR::Logger::init_log_file ($log_file);
+
+# Now we correctly set OSCAR_VERBOSE to be sure we get all the output wee want
+my $initial_verbose = $ENV{OSCAR_VERBOSE};
+if ($verbose) {
+    $ENV{OSCAR_VERBOSE} = 5;
+}
+if ($debug) {
+    $ENV{OSCAR_VERBOSE} = 10;
+}
+
+OSCAR::Logger::oscar_log_section ("OSCAR Packager Starting...");
+
 if ($stable) {
     $config_file = "$config_file_path/core_stable.cfg";
+    OSCAR::Logger::oscar_log_subsection ("Packaging stable OSCAR core");
 }
 
 if ($unstable) {
     $config_file = "$config_file_path/core_unstable.cfg";
+    OSCAR::Logger::oscar_log_subsection ("Packaging unstable OSCAR core");
+}
+
+if ($included_stable) {
+    $config_file = "$config_file_path/included_stable.cfg";
+    OSCAR::Logger::oscar_log_subsection ("Packaging stable included OPKGs");
+}
+
+if ($included_unstable) {
+    $config_file = "$config_file_path/included_unstable.cfg";
+    OSCAR::Logger::oscar_log_subsection ("Packaging unstable included OPKGs");
 }
 
 if (! -f $config_file) {
     die "ERROR: Impossible to find the configuration file ($config_file)";
 }
-my @failed_comp = package_oscar ($config_file);
+my @failed_comp = create_package ($config_file);
 if (scalar (@failed_comp) > 0) {
-    print "Errors occured during the OSCAR packages.\n".
+    OSCAR::Logger::oscar_log_subsection "Errors occured during the OSCAR ".
+          "packages.\n".
           "OSCAR components that failed are: ";
     OSCAR::Utils::print_array (@failed_comp);
 }
+
+# Before to exit, we restore the initial OSCAR_VERBOSE value
+if (defined $initial_verbose) {
+    $ENV{OSCAR_VERBOSE} = $initial_verbose;
+}
+
+OSCAR::Logger::oscar_log_section ("OSCAR Packager Ending");
 
 exit 0;
 
@@ -169,17 +241,21 @@ Recognized options include:
 
 =over 8
 
-=item --stable
+=item --core-stable
 
-Package the latest OSCAR release.
+Package the latest OSCAR core release.
 
-=item --unstable
+=item --core-unstable
 
 Package OSCAR unstable (i.e., the OSCAR SVN trunk).
 
 =item --verbose|-v
 
 Fall back to the verbose mode of execution for debugging purpose.
+
+=item --debug
+
+Display even more output than when using the verbose option.
 
 =back
 
