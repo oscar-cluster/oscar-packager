@@ -1,0 +1,44 @@
+%define binpref /usr/bin
+%define libpref PERLLIBPATH
+%define manpref /usr/local/man/man1
+%define sharepref /usr/share/oscar/prereqs/oda/
+%define bintarget $RPM_BUILD_ROOT%{binpref}
+%define libtarget $RPM_BUILD_ROOT%{libpref}
+%define mantarget $RPM_BUILD_ROOT%{manpref}
+
+Summary:        OSCAR DatabAse.
+Name:           oscar-packager
+Version:        1.0
+Release:        1
+Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
+Distribution:   OSCAR
+Packager:       Geoffroy Vallee <valleegr@ornl.gov>
+License:        GPL
+Group:          Development/Libraries
+Source:         %{name}.tar.gz
+BuildRoot:      %{_localstatedir}/tmp/%{name}-root
+BuildArch:      noarch
+AutoReqProv: 	no
+Requires:       wget, oscar-base-lib
+
+%description
+Set of scripts and Perl modules for the automatic packaging of the OSCAR.
+
+%prep
+%setup -n %{name}
+
+%build
+make install DESTDIR=$RPM_BUILD_ROOT
+
+%install 
+
+%files
+%defattr(-,root,root)
+%{binpref}/*
+%{libpref}/*
+%{sharepref}/*
+%{manpref}/*
+
+%changelog
+* Fri Jan 02 2009 Geoffroy Vallee <valleegr@ornl.gov> 1.0-1
+- new upstream version (see ChangeLog for more details).

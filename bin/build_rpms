@@ -6,11 +6,11 @@
 #
 # Usage:
 #
-# mk_rpms --only-rpm srpm1 [srpms2 ...]
+# build_rpms --only-rpm srpm1 [srpms2 ...]
 #
 # mk_rpms dir
 #
-# mk_rpms spec_file
+# build_rpms spec_file
 #
 # mk_rpms --only-srpms dir|spec_file
 #

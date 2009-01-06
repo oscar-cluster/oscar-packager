@@ -35,9 +35,13 @@ use strict;
 use Carp;
 use vars qw($VERSION @EXPORT);
 use base qw(Exporter);
+use Cwd;
 use File::Basename;
+use File::Copy;
+use File::Path;
 use Data::Dumper;
-use OSCAR::ConfigFile;
+use OSCAR::Defs;
+use OSCAR::FileUtils;
 use OSCAR::Logger;
 use OSCAR::OCA::OS_Detect;
 use OSCAR::Utils;
@@ -185,12 +189,101 @@ sub split_config {
     return @conf_blocks;
 }
 
+# Return: undef if error.
+sub prepare_rpm_env ($$$$$) {
+    my ($name, $os, $sel, $confp, $dest) = @_;
+
+    #
+    # We check the parameters
+    #
+    if (!defined ($confp) && ref($confp) ne "HASH") {
+        carp "ERROR: Invalid configuration data";
+        return undef;
+    }
+    if (!OSCAR::Utils::is_a_valid_string ($name)) {
+        carp "ERROR: Invalid OPKG name";
+        return undef;
+    }
+    if (!defined ($os)) {
+        carp "ERROR: Invalid OS_Detect data";
+        return undef;
+    }
+    if (! -d $dest) {
+        carp "ERROR: Invalid destination";
+        return undef;
+    }
+
+    my %conf = %{$confp};
+    my $env;
+
+    my $arch = $os->{arch};
+    my $march = $arch;
+    $march =~ s/^i.86$/i?86/;
+    my $build_arch = $arch;
+    $build_arch =~ s/^i.86$/i686/;
+
+    # gather list of srpms which need to be built
+    my (@sbuild, @buildopts);
+    # we get data for the specific package from the config data
+    my %data = %{${$conf{$sel}}{$name}};
+    # TODO: we should check if the package is already there or not, but right
+    # now i cannot get the package version.
+#     my $name = $conf{$sel}{"$g"}{name};
+#     my $ver = $conf{$sel}{"$g"}{ver};
+#     my $str = "$dest/$name-*$ver.{$march,noarch}.rpm";
+#     OSCAR::Logger::oscar_log_subsection "str: $str\n" if $verbose;
+#     my @gres = glob($str);
+#     if (!scalar(@gres)) {
+        push @sbuild, $data{srpm};
+        push @buildopts, $data{opt};
+#     } else {
+#         OSCAR::Logger::oscar_log_subsection "Found binary packages ".
+#             "for $g:\n\t".join("\n\t",@gres).
+#             "\nSkipping build.\n";
+#     }
+    if (exists($conf{env})) {
+        $env = $conf{env};
+    }
+    if (! -d "$dest") {
+        print "Creating directory: $dest\n";
+        eval { File::Path::mkpath ("$dest") };
+        if ($@) {
+            carp "ERROR: Couldn't create $dest: $@";
+            return 1;
+        }
+        chdir("$dest");
+    }
+
+    my $opt = $data{opt};
+    if ($sel eq "common") {
+        if ($opt !~ m,--target,) {
+            $opt .= " --target noarch";
+        }
+    } else {
+        if ($opt !~ m,--target,) {
+            $opt .= " --target ".$build_arch;
+        }
+    }
+    $ENV{RPMBUILDOPTS} = $opt;
+    if ($opt) {
+        print "setting \$RPMBUILDOPTS=$opt\n";
+    }
+    return $opt;
+}
+
 # This routine effectively create binary packages, hiding the differences 
 # between RPMs and Debs.
 #
 # Return: -1 if error, 0 else.
-sub create_binary ($$) {
-    my ($s, $test) = @_;
+sub create_binary ($$$$) {
+    my ($name, $conf, $sel, $test) = @_;
+
+    OSCAR::Logger::oscar_log_subsection ("Packaging $name");
+
+    # We can sure the directory were we save downloads is ready
+    # TODO: We should be able to specify that via a config file.
+    my $download_dir = "/var/lib/oscar-packager/downloads";
+    my $build_dir = "/var/lib/oscar-packager/build";
 
     my $binaries_path = OSCAR::ConfigFile::get_value ("/etc/oscar/oscar.conf",
                                                       undef,
@@ -202,22 +295,100 @@ sub create_binary ($$) {
         return -1;
     }
 
+    if (! -d $download_dir) {
+        eval { File::Path::mkpath ($download_dir) };
+        if ($@) {
+            carp "ERROR: Couldn't create $download_dir: $@";
+            return -1;
+        }
+    }
+
+    # Is the config file for the package creation here or not?
+    my $config_file = Cwd::cwd() . "/$name.cfg";
+    if (! -f $config_file) {
+        carp "ERROR: $config_file does not exist";
+        return -1;
+    }
+
+    # Now, since we can access the config file, we parse it and download the
+    # needed source files.
+    OSCAR::Logger::oscar_log_subsection "Downloading sources for $name...";
+    my $source_data = OSCAR::ConfigFile::get_value ("$config_file",
+                                                    undef,
+                                                    "source");
+    my ($method, $source) = split (",", $source_data);
+    if (OSCAR::FileUtils::download_file ($source,
+                                         $download_dir,
+                                         $method,
+                                         OSCAR::Defs::NO_OVERWRITE())) {
+        carp "ERROR: Impossible to download the source file ($source)";
+        return -1
+    }
+
+    my $source_file = File::Basename::basename ($source);
+    my $source_type = 
+        OSCAR::FileUtils::file_type ("$download_dir/$source_file");
+    if (!defined $source_type) {
+        carp "ERROR: Impossible to detect the source file format";
+        return -1;
+    }
+
     my $cmd;
     if ($os->{pkg} eq "rpm") {
-        $cmd = "$binaries_path/build_rpms --only-rpm $s";
-        print "**** Executing: $cmd\n";
-        if (!$test) {
-            my $ret = system($cmd);
-            if ($ret) {
-            carp "ERROR: Command execution failed: $!";
-            return $ret;
-            } else {
-                print "\nOK\n";
+        if ($source_type eq OSCAR::Defs::SRPM()) {
+            my $s = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
+            $cmd = "$binaries_path/build_rpms --only-rpm $name.spec $s";
+            OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
+            if (!$test) {
+                my $ret = system($cmd);
+                if ($ret) {
+                    carp "ERROR: Command execution failed: $!";
+                    return $ret;
+                } else {
+                    print "\nOK\n";
+                }
             }
+        } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
+            # We copy the tarball in /usr/src/redhat/SOURCES
+            my $sf = "$download_dir/$source_file";
+            my $d = "/usr/src/redhat/SOURCES";
+            File::Copy::copy ($sf, $d) 
+                or (carp "ERROR: impossible to copy the file ($sf, $d)",
+                    return -1);
+
+            # We try to execute rpmbuild using the spec file
+            $cmd = "rpmbuild -bb ./$name.spec";
+            if (system ($cmd)) {
+                carp "ERROR: Impossible to execute $cmd";
+                return -1;
+            }
+        } else {
+            carp "ERROR: Unsupported file type for binary package creation ".
+                 "($source_type)";
+            return -1;
         }
     } elsif ($os->{pkg} eq "deb") {
-        carp "ERROR: Debian systems not yet supported";
-        return -1;
+        if ($source_type eq OSCAR::Defs::TARBALL()) {
+            # TODO: we should use the build_dir to untar the tarball and try
+            # to create the package.
+
+            # We untar the tarball and try to execute "make deb" against the 
+            # source code
+            $cmd = "cd $download_dir; tar xzf $source_file";
+            if (system $cmd) {
+                carp "ERROR: Impossible to execute $cmd";
+                return -1;
+            }
+            $cmd = "make deb";
+            if (system $cmd) {
+                carp "ERROR: Impossible to execute $cmd";
+                return -1;
+            }
+        } else {
+            carp "ERROR: Unsupported file type for binary package creation ".
+                 "($source_type)";
+            return -1;
+        }
     } else {
         carp "ERROR: $os->{pkg} is not currently supported";
         return -1;
@@ -226,12 +397,12 @@ sub create_binary ($$) {
     return 0;
 }
 
-#
+################################################################################
 # Core binary package building routine
 # - detects name and version-release from source rpms
-# - checks whether rpms containing name/version already exist in the target dir
-# - builds by calling build_rpms, adds build options from config file
-# - all rpms resulting from build end up in the target directory
+# - checks the binary package(s) already exist in the target dir
+# - builds by calling create_binary, adds build options from config file
+# - all binary packages resulting from build end up in the target directory
 #
 # Return: 0 if no error, else the number of errors during the build process.
 sub build_if_needed {
@@ -247,54 +418,21 @@ sub build_if_needed {
 
         print "== $sel ==\n".Dumper(%conf)."=====\n" if $verbose;
 
-        # gather list of srpms which need to be built
-        my (@sbuild,@buildopts);
         for my $g (keys(%{$conf{$sel}})) {
-            print "key: $g\n";
-            my $name = $conf{$sel}{"$g"}{name};
-            my $ver = $conf{$sel}{"$g"}{ver};
-            my $str = "$pdir/$target/$name-*$ver.{$march,noarch}.rpm";
-            print "str: $str\n" if $verbose;
-            my @gres = glob($str);
-            if (!scalar(@gres)) {
-                push @sbuild, $conf{$sel}{"$g"}{srpm};
-                push @buildopts, $conf{$sel}{"$g"}{opt};
-            } else {
-                print "Found binary packages for $g:\n\t".join("\n\t",@gres).
-                      "\nSkipping build.\n";
-            }
-        }
-        if (exists($conf{env})) {
-            $env = $conf{env};
-        }
-        if (@sbuild) {
-            if (! -d "$pdir/$target") {
-            print "Creating directory: $pdir/$target\n";
-            !system("mkdir -p $pdir/$target")
-                or croak("Could not create $target in $pdir: $!");
-            }
-            chdir("$pdir/$target");
-
-            for my $s (@sbuild) {
-            my $opt = shift @buildopts;
-            if ($sel eq "common") {
-                if ($opt !~ m,--target,) {
-                    $opt .= " --target noarch";
-                }
-            } else {
-                if ($opt !~ m,--target,) {
-                    $opt .= " --target ".$build_arch;
-                }
-            }
-            $ENV{RPMBUILDOPTS} = $opt;
-            if ($opt) {
-                print "setting \$RPMBUILDOPTS=$opt\n";
-            }
-            create_binary ($s, $test);
+            if (create_binary ($g, $confp, $sel, $test)) {
+                carp "ERROR: Impossible to create the binary ".
+                     "($g, $test)";
+                $err++;
             }
         }
     }
-    OSCAR::Logger::oscar_log_subsection ("Binary packages created");
+
+    if ($err) {
+        OSCAR::Logger::oscar_log_subsection ("ERROR: Impossible to create ".
+            "some binary packages");
+    } else {
+        OSCAR::Logger::oscar_log_subsection ("Binary packages created");
+    }
     return $err;
 }
 
@@ -370,7 +508,7 @@ sub build_binaries ($$) {
     my ($pdir,$confp) = @_;
     my ($err, $bindir);
 
-    my @conf_blocks = &split_config(@$confp);
+    my @conf_blocks = split_config(@$confp);
 
     for my $cblock (@conf_blocks) {
         my %conf = %{$cblock};
@@ -382,7 +520,7 @@ sub build_binaries ($$) {
         }
 
         # check and build common-rpms if needed
-        $err = build_if_needed(\%conf,$pdir, "common", "distro/common");
+        $err = build_if_needed(\%conf, $pdir, "common", "/tmp");
         if ($err) {
             carp "ERROR: Impossible to build the OPKG ($pdir)";
             return -1;
@@ -434,7 +572,6 @@ sub package_opkg ($) {
 #     # remove installed requires
 #     &remove_installed_reqs;
 
-    OSCAR::Logger::oscar_log_subsection "=====================================";
     return 0;
 }
 

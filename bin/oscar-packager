@@ -124,17 +124,17 @@ sub create_package ($) {
                 $cmd .= "$build_cmd && ";
             }
             if ($os->{pkg} eq "deb") {
-                $cmd .= "make deb";
+                $cmd .= "make deb ";
                 $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             } elsif ($os->{pkg} eq "rpm") {
-                $cmd .= "make rpm";
+                $cmd .= "make rpm ";
                 $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             } else {
                 die "ERROR: Unknow binary package format ($os->{pkg})";
             }
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             if (system ($cmd)) {
-                OSCAR::Logger::oscar_log_subsection "[INFO] Impossible to ".
+                OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
                     "build $c ($cmd)";
                 push (@failed_comp, $c);
             }
