@@ -303,6 +303,9 @@ sub create_binary ($$$$) {
         }
     }
 
+    # We go in the directory were the OPKG source code is
+    chdir "/tmp/oscar-packager/$name";
+
     # Is the config file for the package creation here or not?
     my $config_file = Cwd::cwd() . "/$name.cfg";
     if (! -f $config_file) {
@@ -337,7 +340,7 @@ sub create_binary ($$$$) {
     if ($os->{pkg} eq "rpm") {
         if ($source_type eq OSCAR::Defs::SRPM()) {
             my $s = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
-            $cmd = "$binaries_path/build_rpms --only-rpm $name.spec $s";
+            $cmd = "$binaries_path/build_rpms --only-rpm $download_dir/$source_file $s";
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             if (!$test) {
                 my $ret = system($cmd);
@@ -476,7 +479,13 @@ sub install_requires {
 #         # remember bianry packages which were installed before
 #         my %before = map { $_ => 1 }
 #                     split("\n",`rpm -qa --qf '%{NAME}.%{ARCH}\n'`);
-        my $cmd = "/usr/bin/packman install ".join(" ",@install_stack);
+	my $os = OSCAR::OCA::OS_Detect::open ();
+	if (!defined $os && ref($os) ne "HASH") {
+            carp "ERROR: Impossible to detect the local distro";
+            return -1;
+        }
+	my $distro_id = "$os->{distro}-$os->{distro_version}-$os->{arch}";
+        my $cmd = "/usr/bin/packman install ".join(" ",@install_stack)." --distro $distro_id";
         print "Executing: $cmd\n" if $verbose;
         if (system($cmd)) {
             print "Warning: failed to install requires: ".join(" ",@reqs)."\n";

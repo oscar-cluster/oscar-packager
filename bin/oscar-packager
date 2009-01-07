@@ -99,6 +99,7 @@ sub create_package ($) {
 
     my $cmd;
     foreach my $c (@cpts) {
+	OSCAR::Logger::oscar_log_subsection "Packaging $c...";
         my $source = OSCAR::ConfigFile::get_value ($config_file, $c, "source");
         my ($method, $url) = split (",", $source);
         if ($method eq "svn") {
@@ -209,7 +210,7 @@ if (! -f $config_file) {
 my @failed_comp = create_package ($config_file);
 if (scalar (@failed_comp) > 0) {
     OSCAR::Logger::oscar_log_subsection "Errors occured during the OSCAR ".
-          "packages.\n".
+          "packaging.\n".
           "OSCAR components that failed are: ";
     OSCAR::Utils::print_array (@failed_comp);
 }
