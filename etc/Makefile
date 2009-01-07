@@ -3,7 +3,7 @@ DESTDIR=
 TOPDIR=..
 #include $(TOPDIR)/Config.mk
 
-FILES := core_stable.cfg core_unstable.cfg included_stable.cfg included_unstable.cfg
+FILES := core_stable_6.0.cfg core_unstable.cfg included_stable_6.0.cfg included_unstable.cfg
 SUBDIRS :=
 
 all:

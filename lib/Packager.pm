@@ -46,7 +46,7 @@ use OSCAR::Logger;
 use OSCAR::OCA::OS_Detect;
 use OSCAR::Utils;
 
-@EXPORT = qw(package_opkg);
+@EXPORT = qw(package_opkg available_releases);
 
 my $verbose = 1;
 
@@ -584,15 +584,36 @@ sub package_opkg ($) {
     return 0;
 }
 
+sub available_releases () {
+    my $path = "/etc/oscar/oscar-packager";
+    my @files = OSCAR::FileUtils::get_files_in_path ("$path");
+
+    die "ERROR: Impossible to scan $path" if (scalar @files == 0);
+
+    my @releases;
+    foreach my $f (@files) {
+        if ($f =~ m/^core_stable_(.*).cfg$/) {
+            push (@releases, $1);
+        }
+    }
+
+    return (@releases);
+}
+
+
 __END__
 
 =head1 Exported functions
 
 =over 4
 
-=item package_opkg ("/var/lib/oscar/package/c3/build.cfg");
+=item package_opkg
 
-Package a given OPKG.
+Package a given OPKG. Example: package_opkg ("/var/lib/oscar/package/c3/build.cfg");
+
+=item available_releases
+
+Returns the list of OSCAR releases that can be packaged. Example: my @oscar_releases = available_releases ();
 
 =back
 

@@ -24,16 +24,16 @@ use File::Path;
 use Carp;
 use warnings "all";
 
-my ($stable, $unstable, $included_stable, $included_unstable, $verbose, $debug);
+my ($core, $included, $verbose, $debug, $release, $available_releases);
 
 our $packaging_dir = "/tmp/oscar-packager";
 
 Getopt::Long::Configure("pass_through");
 GetOptions(
-        "core-stable"                       => \$stable,
-        "core-unstable"                     => \$unstable,
-        "included-stable"                   => \$included_stable,
-        "included-unstable"                 => \$included_unstable,
+        "core"                              => \$core,
+        "included"                          => \$included,
+        "release=s"                         => \$release,
+        "supported-releases"                => \$available_releases,
         "verbose"                           => \$verbose,
         "debug"                             => \$debug,
         "v"                                 => \$verbose,
@@ -182,26 +182,43 @@ if ($debug) {
     $ENV{OSCAR_VERBOSE} = 10;
 }
 
+#
+# Special case: the user just want the list of available releases for which we
+# can package OSCAR
+#
+if ($available_releases) {
+    my @releases = OSCAR::Packager::available_releases();
+    die "ERROR: Impossible to get the list of supported releases"
+        if (scalar (@releases) == 0);
+    print "Packaging capability available for the following OSCAR releases:\n";
+    OSCAR::Utils::print_array (@releases);
+    exit (0)
+}
+
 OSCAR::Logger::oscar_log_section ("OSCAR Packager Starting...");
 
-if ($stable) {
-    $config_file = "$config_file_path/core_stable.cfg";
+if ($release && $core) {
+    $config_file = "$config_file_path/core_stable_$release.cfg";
     OSCAR::Logger::oscar_log_subsection ("Packaging stable OSCAR core");
 }
 
-if ($unstable) {
+if (!$release && $core) {
     $config_file = "$config_file_path/core_unstable.cfg";
     OSCAR::Logger::oscar_log_subsection ("Packaging unstable OSCAR core");
 }
 
-if ($included_stable) {
-    $config_file = "$config_file_path/included_stable.cfg";
+if ($release && $included) {
+    $config_file = "$config_file_path/included_stable_$release.cfg";
     OSCAR::Logger::oscar_log_subsection ("Packaging stable included OPKGs");
 }
 
-if ($included_unstable) {
+if (!$release && $included) {
     $config_file = "$config_file_path/included_unstable.cfg";
     OSCAR::Logger::oscar_log_subsection ("Packaging unstable included OPKGs");
+}
+
+if (!defined $config_file) {
+    die "ERROR: Invalid parameters";
 }
 
 if (! -f $config_file) {
@@ -259,6 +276,14 @@ Package stable included OSCAR packages.
 =item --included-unstable
 
 Package the instable version of included OSCAR packages.
+
+=item --release
+
+Specify the OSCAR release that has to be packaged. By default this is the unstable version of OSCAR.
+
+=item --supported-releases
+
+Give the list of OSCAR releases that can be packaged.
 
 =item --verbose|-v
 
