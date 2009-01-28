@@ -28,7 +28,7 @@ my ($core, $included, $verbose, $debug, $available_releases);
 
 our $packaging_dir = "/tmp/oscar-packager";
 
-Getopt::Long::Configure("pass_through");
+# Getopt::Long::Configure("pass_through");
 GetOptions(
         "core=s"                            => \$core,
         "included=s"                        => \$included,
@@ -139,8 +139,7 @@ sub create_package ($) {
                 push (@failed_comp, $c);
             }
         } else {
-            OSCAR::Logger::oscar_log_subsection "ERROR: Unknow method to ".
-                "access source ($method)";
+            carp "ERROR: Unknow method to access source ($method)";
             push (@failed_comp, $c);
         }
     }
@@ -226,8 +225,7 @@ if (! -f $config_file) {
 }
 my @failed_comp = create_package ($config_file);
 if (scalar (@failed_comp) > 0) {
-    OSCAR::Logger::oscar_log_subsection "Errors occured during the OSCAR ".
-          "packaging.\n".
+    carp "Errors occured during the OSCAR packaging.\n".
           "OSCAR components that failed are: ";
     OSCAR::Utils::print_array (@failed_comp);
 }
@@ -263,11 +261,11 @@ Recognized options include:
 
 =item --core [VERSION]
 
-Package a given release of the OSCAR core (the unstable version if VERSION is not specified or if it does not match any of the supported releases).
+Package a given release of the OSCAR core. To package the development version, use "unstable" as VERSION.
 
 =item --included [VERSION]
 
-Package a given release of the OSCAR included OPKGs (the unstable version if VERSION is not specified or if it does not match any of the supported releases).
+Package a given release of the OSCAR included OPKGs. To package the development version, use "unstable" as VERSION.
 
 =item --supported-releases
 
