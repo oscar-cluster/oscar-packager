@@ -19,7 +19,7 @@ Source:         %{name}.tar.gz
 BuildRoot:      %{_localstatedir}/tmp/%{name}-root
 BuildArch:      noarch
 AutoReqProv: 	no
-Requires:       wget, oscar-base-lib
+Requires:       wget, oscar-base-lib, rpm-build
 
 %description
 Set of scripts and Perl modules for the automatic packaging of the OSCAR.
