@@ -130,7 +130,7 @@ sub create_package ($) {
                 $cmd .= "make rpm ";
                 # On some fedora core releases, we cannot use /usr/src/redhat
                 if (($os->{compat_distro} eq "fc") 
-                    && ($os->{compat_distrover} > 10)) {
+                    && ($os->{compat_distrover} >= 10)) {
                     $cmd .= " SOURCEDIR=~/rpmbuild/SOURCES ";
                 }
                 $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
