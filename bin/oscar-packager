@@ -28,7 +28,6 @@ my ($core, $included, $verbose, $debug, $available_releases, $unsigned);
 
 our $packaging_dir = "/tmp/oscar-packager";
 use vars qw ($pkg_destdir);
-$pkg_destdir = "/tftpboot/distro/local-distro";
 
 # Getopt::Long::Configure("pass_through");
 GetOptions(
@@ -80,19 +79,21 @@ sub create_package ($) {
     my @failed_comp;
 
     #
-    # We check that the destination directory for the packages is there, if not
-    # we create it.
-    #
-    if ( ! -d $pkg_destdir) {
-        File::Path::mkpath ($pkg_destdir);
-    }
-
-    #
     # First we check what is the underlying packaging system (RPM vs. Deb)
     #
     my $os = OSCAR::OCA::OS_Detect::open();
     if (!defined $os) {
         die "ERROR: Impossible to detect the binary package format";
+    }
+
+    #
+    # We check that the destination directory for the packages is there, if not
+    # we create it.
+    #
+    $pkg_destdir = "/tftpboot/oscar/";
+    $pkg_destdir .= "$os->{distro}-$os->{distro_version}-$os->{arch}";
+    if ( ! -d $pkg_destdir) {
+        File::Path::mkpath ($pkg_destdir);
     }
 
     #
