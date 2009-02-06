@@ -24,15 +24,18 @@ use File::Path;
 use Carp;
 use warnings "all";
 
-my ($core, $included, $verbose, $debug, $available_releases);
+my ($core, $included, $verbose, $debug, $available_releases, $unsigned);
 
 our $packaging_dir = "/tmp/oscar-packager";
+use vars qw ($pkg_destdir);
+$pkg_destdir = "/tftpboot/distro/local-distro";
 
 # Getopt::Long::Configure("pass_through");
 GetOptions(
         "core=s"                            => \$core,
         "included=s"                        => \$included,
         "supported-releases"                => \$available_releases,
+        "unsigned-packages"                 => \$unsigned,
         "verbose"                           => \$verbose,
         "debug"                             => \$debug,
         "v"                                 => \$verbose,
@@ -75,6 +78,14 @@ sub prepare_prereqs ($) {
 sub create_package ($) {
     my $config_file = shift;
     my @failed_comp;
+
+    #
+    # We check that the destination directory for the packages is there, if not
+    # we create it.
+    #
+    if ( ! -d $pkg_destdir) {
+        File::Path::mkpath ($pkg_destdir);
+    }
 
     #
     # First we check what is the underlying packaging system (RPM vs. Deb)
@@ -124,10 +135,10 @@ sub create_package ($) {
                 $cmd .= "$build_cmd && ";
             }
             if ($os->{pkg} eq "deb") {
-                $cmd .= "make deb ";
+                $cmd .= "make deb PKGDEST=$pkg_destdir ";
                 $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             } elsif ($os->{pkg} eq "rpm") {
-                $cmd .= "make rpm ";
+                $cmd .= "make rpm PKGDEST=$pkg_destdir ";
                 # On some fedora core releases, we cannot use /usr/src/redhat
                 if (($os->{compat_distro} eq "fc") 
                     && ($os->{compat_distrover} >= 10)) {
@@ -184,6 +195,8 @@ if ($verbose) {
 if ($debug) {
     $ENV{OSCAR_VERBOSE} = 10;
 }
+
+$ENV{UNSIGNED_OSCAR_PKG} =1 if ($unsigned);
 
 my @releases = OSCAR::Packager::available_releases();
 
@@ -275,6 +288,10 @@ Package a given release of the OSCAR included OPKGs. To package the development 
 =item --supported-releases
 
 Give the list of OSCAR releases that can be packaged.
+
+=item --unsigned-packages
+
+Do not sign the binary packages that will be created (currently only for Debian systems).
 
 =item --verbose|-v
 
