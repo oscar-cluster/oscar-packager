@@ -91,7 +91,7 @@ sub create_package ($) {
     # we create it.
     #
     $pkg_destdir = "/tftpboot/oscar/";
-    $pkg_destdir .= "$os->{distro}-$os->{distro_version}-$os->{arch}";
+    $pkg_destdir .= "$os->{compat_distro}-$os->{compat_distrover}-$os->{arch}";
     if ( ! -d $pkg_destdir) {
         File::Path::mkpath ($pkg_destdir);
     }
@@ -161,8 +161,14 @@ sub create_package ($) {
         }
     }
 
-    OSCAR::Logger::oscar_log_subsection "[INFO] Generated binary packages ".
-        "are in $packaging_dir";
+    $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
+    if (system($cmd)) {
+        carp "ERROR: Impossible to execute $cmd";
+        push (@failed_comp, $cmd);
+    }
+
+    OSCAR::Logger::oscar_log_section "[INFO] Generated binary packages ".
+        "are in $pkg_destdir";
 
     return @failed_comp;
 }
