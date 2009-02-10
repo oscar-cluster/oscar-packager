@@ -1,5 +1,5 @@
 1.0 (not yet released):
-- Add configuration file for oscar-6.0 and oscar-6.0.1.
+- Add configuration file for oscar-6.0, oscar-6.0.1, and oscar-6.0.2.
 - Initial release.
 - Allows the creation of binary packages for OSCAR core (stable and unstable)
 on both RPM and Debian based systems.
