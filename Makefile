@@ -1,4 +1,5 @@
 DESTDIR=
+SOURCEDIR=/usr/src/redhat/SOURCES
 
 include ./Config.mk
 
@@ -26,12 +27,13 @@ dist: clean
 	@mkdir -p /tmp/oscar-packager
 	@cp -rf * /tmp/oscar-packager
 	@cd /tmp/oscar-packager; rm -rf `find . -name ".svn"`
-	@cd /tmp; tar czf oscar-packager.tar.gz oda
+	@cd /tmp; tar czf oscar-packager.tar.gz oscar-packager
 	@cp -f /tmp/oscar-packager.tar.gz .
 	@rm -rf /tmp/oscar-packager/
 	@rm -f /tmp/oscar-packager.tar.gz
 
 rpm: dist
+	@cp oscar-packager.tar.gz $(SOURCEDIR)
 	sed -e "s/PERLLIBPATH/$(SEDLIBDIR)/" < oscar-packager.spec.in \
         > oscar-packager.spec
 	rpmbuild -bb ./oscar-packager.spec
