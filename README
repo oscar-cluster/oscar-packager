@@ -1,0 +1,13 @@
+= RPM Based System =
+
+In order to use oscar-packager, you will need to install the following 
+components from sources:
+- oscar-base: https://svn.oscar.openclustergroup.org/svn/oscar/trunk
+- packman: https://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/packman/trunk
+
+- yume: https://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/yume/trunk
+
+For each of those components, please check the repository out ("svn co <url>",
+where 'url' is the URL we just gave for each component, and then run the "sudo
+make install" from the top directory of the source code.
+
