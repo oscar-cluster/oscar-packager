@@ -346,7 +346,7 @@ if (!defined $config_file) {
 if (! -f $config_file) {
     die "ERROR: Impossible to find the configuration file ($config_file)";
 }
-my @failed_comp = create_package ($config_file);
+@failed_comp = create_package ($config_file);
 if (scalar (@failed_comp) > 0) {
     carp "Errors occured during the OSCAR packaging.\n".
           "OSCAR components that failed are: ";
