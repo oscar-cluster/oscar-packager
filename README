@@ -10,6 +10,10 @@ For each of those components, please check the repository out ("svn co <url>",
 where 'url' is the URL we just gave for each component, and then run the "sudo
 make install" from the top directory of the source code.
 
+OPKGC, the OSCAR package compiler, is also required. Please install opkgc by
+creating the RPM is installing the RPM, otherwise you may encounter technical
+difficulties.
+
 You will also need to install createrepo (yum -y install createrepo).
 
 Also remember to setup your distribution with oscar-config (the --setup-distro
@@ -26,6 +30,10 @@ components from sources:
 For each of those components, please check the repository out ("svn co <url>",
 where 'url' is the URL we just gave for each component, and then run the "sudo
 make install" from the top directory of the source code.
+
+OPKGC, the OSCAR package compiler, is also required. Please install opkgc by
+creating the RPM is installing the RPM, otherwise you may encounter technical
+difficulties.
 
 You will also need to install the following debian packages:
 libappconfig-perl fakeroot dpkg-dev debhelper build-essential
