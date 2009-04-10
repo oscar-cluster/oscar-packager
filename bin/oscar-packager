@@ -74,26 +74,112 @@ sub prepare_prereqs ($) {
     return 0;
 }
 
-sub create_package ($) {
-    my $config_file = shift;
-    my @failed_comp;
-
+sub get_pkg_dest () {
     #
     # First we check what is the underlying packaging system (RPM vs. Deb)
     #
     my $os = OSCAR::OCA::OS_Detect::open();
     if (!defined $os) {
-        die "ERROR: Impossible to detect the binary package format";
+        carp "ERROR: Impossible to detect the binary package format";
+        return "OS not detected";
     }
 
     #
     # We check that the destination directory for the packages is there, if not
     # we create it.
     #
-    $pkg_destdir = "/tftpboot/oscar/";
-    $pkg_destdir .= "$os->{compat_distro}-$os->{compat_distrover}-$os->{arch}";
-    if ( ! -d $pkg_destdir) {
-        File::Path::mkpath ($pkg_destdir);
+    my $destdir = "/tftpboot/oscar/";
+    $destdir .= "$os->{compat_distro}-$os->{compat_distrover}-$os->{arch}";
+    if ( ! -d $destdir) {
+        File::Path::mkpath ($destdir) 
+            or (carp "ERROR: Impossible to create $destdir", return undef);
+    }
+
+    return $destdir;
+}
+
+sub create_opkgs_metapkg ($) {
+    my $config_file = shift;
+    my @failed_comp;
+
+    if (! -f $config_file) {
+        return "ERROR: Impossible to access $config_file";
+    }
+
+    OSCAR::Logger::oscar_log_section "Creating OPKG meta-packages...";
+
+    $pkg_destdir = get_pkg_dest ();
+    if (!defined $pkg_destdir) {
+        return "ERROR: Impossible to get the destination for packages";
+    }
+
+    #
+    # We parse the config file.
+    #
+    OSCAR::Logger::oscar_log_subsection "Parsing $config_file...";
+    my @cpts = OSCAR::ConfigFile::get_block_list ($config_file);
+    OSCAR::Utils::print_array (@cpts) if $verbose;
+
+    my $cmd;
+    foreach my $c (@cpts) {
+        OSCAR::Logger::oscar_log_subsection "Packaging $c...";
+        my $source = OSCAR::ConfigFile::get_value ($config_file, $c, "source");
+        my ($method, $url) = split (",", $source);
+        if ($method eq "svn") {
+            # We check out SVN
+            $cmd = "cd $packaging_dir; svn co $url $c ";
+            $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+            OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
+            system $cmd;
+        } else {
+            carp "ERROR: Unknow method to access source ($method)";
+            push (@failed_comp, $c);
+        }
+
+        # We compile
+        require OSCAR::PackagePath;
+        my $distro_id = OSCAR::PackagePath::get_distro ();
+        if (!OSCAR::Utils::is_a_valid_string ($distro_id)) {
+            return "ERROR: Impossible to get the distro ID";
+        }
+        my $compat_id = OSCAR::PackagePath::get_compat_distro ($distro_id);
+        if (!OSCAR::Utils::is_a_valid_string ($compat_id)) {
+            return "ERROR: Impossible to detect the compat distro ($distro_id)";
+        }
+        my ($compat_dist, @trash) = split ("-", $compat_id);
+        $cmd = "cd $packaging_dir/$c; ";
+        $cmd .= "opkgc --dist $compat_dist --output $pkg_destdir ";
+        $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+        OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
+        if (system ($cmd)) {
+            OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
+                "build $c ($cmd)";
+            push (@failed_comp, $c);
+        }
+    }
+
+    $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
+    if (system($cmd)) {
+        carp "ERROR: Impossible to execute $cmd";
+        push (@failed_comp, $cmd);
+    }
+
+    OSCAR::Logger::oscar_log_section "[INFO] Generated binary packages ".
+        "are in $pkg_destdir";
+
+    return @failed_comp
+}
+
+sub create_package ($) {
+    my $config_file = shift;
+    my @failed_comp;
+
+    #
+    # We get the destination directory for the packages
+    #
+    $pkg_destdir = get_pkg_dest ();
+    if (!defined $pkg_destdir) {
+        return "ERROR: Impossible to get the destination for packages";
     }
 
     #
@@ -108,9 +194,15 @@ sub create_package ($) {
     my @cpts = OSCAR::ConfigFile::get_block_list ($config_file);
     OSCAR::Utils::print_array (@cpts) if $verbose;
 
+    my $os = OSCAR::OCA::OS_Detect::open();
+    if (!defined $os) {
+        carp "ERROR: Impossible to detect the binary package format";
+        return "OS not detected";
+    }
+
     my $cmd;
     foreach my $c (@cpts) {
-	OSCAR::Logger::oscar_log_subsection "Packaging $c...";
+        OSCAR::Logger::oscar_log_subsection "Packaging $c...";
         my $source = OSCAR::ConfigFile::get_value ($config_file, $c, "source");
         my ($method, $url) = split (",", $source);
         if ($method eq "svn") {
@@ -188,7 +280,10 @@ sub help_and_exit {
 }
 
 my $config_file_path = "/etc/oscar/oscar-packager";
-my $config_file;
+my $config_file; # This variable points to the config file for the components
+                 # we try to package.
+my $opkg_conffile; # This variable points to the associated OPKGs.
+my @failed_comp;
 
 # We create a log file specific to oscar-packager
 my $log_file = "/var/log/oscar/oscar-packager.log";
@@ -223,11 +318,13 @@ OSCAR::Logger::oscar_log_section ("OSCAR Packager Starting...");
 
 if ($core && OSCAR::Utils::is_element_in_array($core, @releases) ) {
     $config_file = "$config_file_path/core_stable_$core.cfg";
+    $opkg_conffile = "$config_file_path/core_opkgs_$core.cfg";
     OSCAR::Logger::oscar_log_subsection ("Packaging stable OSCAR core");
 }
 
 if ($core && !OSCAR::Utils::is_element_in_array($core, @releases)) {
     $config_file = "$config_file_path/core_unstable.cfg";
+    $opkg_conffile = "$config_file_path/core_opkgs_unstable.cfg";
     OSCAR::Logger::oscar_log_subsection ("Packaging unstable OSCAR core");
 }
 
@@ -245,6 +342,7 @@ if (!defined $config_file) {
     die "ERROR: Invalid parameters";
 }
 
+# We now create binary packages for each components.
 if (! -f $config_file) {
     die "ERROR: Impossible to find the configuration file ($config_file)";
 }
@@ -253,7 +351,22 @@ if (scalar (@failed_comp) > 0) {
     carp "Errors occured during the OSCAR packaging.\n".
           "OSCAR components that failed are: ";
     OSCAR::Utils::print_array (@failed_comp);
+    exit 1;
 }
+
+# We now create the meta-package for all core OPKGs.
+if (-f $opkg_conffile) {
+    @failed_comp = create_opkgs_metapkg ($opkg_conffile);
+    if (scalar (@failed_comp) > 0) {
+        carp "Errors occured during the creation of meta-packages for ".
+             "available OPKGs";
+        OSCAR::Utils::print_array (@failed_comp);
+        exit 1;
+    }
+} else {
+    print "[INFO] No configuration for OPKGs found, skipping that step ".
+          "($opkg_conffile)\n";
+}   
 
 # Before to exit, we restore the initial OSCAR_VERBOSE value
 if (defined $initial_verbose) {

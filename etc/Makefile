@@ -3,7 +3,9 @@ DESTDIR=
 TOPDIR=..
 #include $(TOPDIR)/Config.mk
 
-FILES := core_stable_6.0.cfg core_unstable.cfg included_stable_6.0.cfg included_unstable.cfg
+FILES := core_stable_6.0.cfg core_unstable.cfg included_stable_6.0.cfg \
+	included_unstable.cfg core_opkgs_6.0.2.cfg core_opkgs_unstable.cfg \
+	core_stable_6.0.2.cfg core_stable_6.0.1.cfg
 SUBDIRS :=
 
 all:
@@ -19,3 +21,4 @@ uninstall:
 	for dir in ${SUBDIRS} ; do ( cd $$dir ; ${MAKE} uninstall ) ; done
 
 clean:
+	rm -f *~
