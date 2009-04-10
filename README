@@ -27,5 +27,8 @@ For each of those components, please check the repository out ("svn co <url>",
 where 'url' is the URL we just gave for each component, and then run the "sudo
 make install" from the top directory of the source code.
 
+You will also need to install the following debian packages:
+libappconfig-perl fakeroot dpkg-dev debhelper build-essential
+
 Also remember to setup your distribution with oscar-config (the --setup-distro
 option, for more details, please refer to the oscar-config man page).
