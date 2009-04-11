@@ -18,6 +18,9 @@ You will also need to install createrepo (yum -y install createrepo).
 
 Also remember to setup your distribution with oscar-config (the --setup-distro
 option, for more details, please refer to the oscar-config man page).
+Furthermore, if the oscar configuration file does not exist
+(/etc/oscar/oscar.conf), please create one (you can use the "oscar-config
+--generate-config-file command for that).
 
 = Debian Based System =
 
@@ -39,4 +42,7 @@ You will also need to install the following debian packages:
 libappconfig-perl fakeroot dpkg-dev debhelper build-essential
 
 Also remember to setup your distribution with oscar-config (the --setup-distro
-option, for more details, please refer to the oscar-config man page).
+option, for more details, please refer to the oscar-config man page). 
+Furthermore, if the oscar configuration file does not exist 
+(/etc/oscar/oscar.conf), please create one (you can use the "oscar-config
+--generate-config-file command for that).
