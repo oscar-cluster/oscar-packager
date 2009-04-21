@@ -14,7 +14,8 @@ OPKGC, the OSCAR package compiler, is also required. Please install opkgc by
 creating the RPM is installing the RPM, otherwise you may encounter technical
 difficulties.
 
-You will also need to install createrepo (yum -y install createrepo).
+You will also need to install createrepo and perl-AppConfig (yum -y install
+createrepo perl-AppConfig).
 
 Also remember to setup your distribution with oscar-config (the --setup-distro
 option, for more details, please refer to the oscar-config man page).
