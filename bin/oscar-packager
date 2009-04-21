@@ -16,6 +16,7 @@
 use strict;
 use Getopt::Long;
 use OSCAR::Utils;
+use OSCAR::FileUtils;
 use OSCAR::ConfigFile;
 use OSCAR::OCA::OS_Detect;
 use OSCAR::Logger;
@@ -211,44 +212,49 @@ sub create_package ($) {
             $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             system $cmd;
-
-            # We check the prereqs (including dependencies with other packages)
-            if (prepare_prereqs ("$packaging_dir/$c")) {
-                carp "ERROR: Impossible to manage prereqs for the creation of ".
-                     "the binary package";
-                push (@failed_comp, $c);
-            }
-
-            # We compile
-            $cmd = "cd $packaging_dir/$c; ";
-            my $build_cmd = OSCAR::ConfigFile::get_value ($config_file,
-                                                          $c,
-                                                          "precommand");
-            if (defined ($build_cmd)) {
-                $cmd .= "$build_cmd && ";
-            }
-            if ($os->{pkg} eq "deb") {
-                $cmd .= "make deb PKGDEST=$pkg_destdir ";
-                $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
-            } elsif ($os->{pkg} eq "rpm") {
-                $cmd .= "make rpm PKGDEST=$pkg_destdir ";
-                # On some fedora core releases, we cannot use /usr/src/redhat
-                if (($os->{compat_distro} eq "fc") 
-                    && ($os->{compat_distrover} >= 10)) {
-                    $cmd .= " SOURCEDIR=~/rpmbuild/SOURCES ";
-                }
-                $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
-            } else {
-                die "ERROR: Unknow binary package format ($os->{pkg})";
-            }
-            OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
-            if (system ($cmd)) {
-                OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
-                    "build $c ($cmd)";
-                push (@failed_comp, $c);
-            }
+        } elsif ($method eq "wget") {
+            require OSCAR::Defs;
+            my $dest = "$packaging_dir/$c";
+            OSCAR::FileUtils::download_file ($url, "$dest", "wget",
+                OSCAR::Defs::OVERWRITE());
         } else {
             carp "ERROR: Unknow method to access source ($method)";
+            push (@failed_comp, $c);
+        }
+
+        # We check the prereqs (including dependencies with other packages)
+        if (prepare_prereqs ("$packaging_dir/$c")) {
+            carp "ERROR: Impossible to manage prereqs for the creation of ".
+                    "the binary package";
+            push (@failed_comp, $c);
+        }
+
+        # We compile
+        $cmd = "cd $packaging_dir/$c; ";
+        my $build_cmd = OSCAR::ConfigFile::get_value ($config_file,
+                                                        $c,
+                                                        "precommand");
+        if (defined ($build_cmd)) {
+            $cmd .= "$build_cmd && ";
+        }
+        if ($os->{pkg} eq "deb") {
+            $cmd .= "make deb PKGDEST=$pkg_destdir ";
+            $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+        } elsif ($os->{pkg} eq "rpm") {
+            $cmd .= "make rpm PKGDEST=$pkg_destdir ";
+            # On some fedora core releases, we cannot use /usr/src/redhat
+            if (($os->{compat_distro} eq "fc") 
+                && ($os->{compat_distrover} >= 10)) {
+                $cmd .= " SOURCEDIR=~/rpmbuild/SOURCES ";
+            }
+            $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+        } else {
+            die "ERROR: Unknow binary package format ($os->{pkg})";
+        }
+        OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
+        if (system ($cmd)) {
+            OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
+                "build $c ($cmd)";
             push (@failed_comp, $c);
         }
     }
