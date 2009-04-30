@@ -247,6 +247,9 @@ sub create_package ($) {
                 && ($os->{compat_distrover} >= 10)) {
                 $cmd .= " SOURCEDIR=~/rpmbuild/SOURCES ";
             }
+            if ($os->{distro} eq "suse") {
+                $cmd .= " SOURCEDIR=/usr/src/packages ";
+            }
             $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
         } else {
             die "ERROR: Unknow binary package format ($os->{pkg})";
