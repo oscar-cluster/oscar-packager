@@ -248,7 +248,7 @@ sub create_package ($) {
                 $cmd .= " SOURCEDIR=~/rpmbuild/SOURCES ";
             }
             if ($os->{distro} eq "suse") {
-                $cmd .= " SOURCEDIR=/usr/src/packages ";
+                $cmd .= " SOURCEDIR=/usr/src/packages/SOURCES ";
             }
             $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
         } else {
