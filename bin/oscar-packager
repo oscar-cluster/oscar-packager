@@ -171,6 +171,8 @@ sub create_opkgs_metapkg ($) {
     return @failed_comp
 }
 
+# Return: an array of errors (most of the time the OPKG for each the failure
+#         occured.
 sub create_package ($) {
     my $config_file = shift;
     my @failed_comp;
@@ -202,12 +204,15 @@ sub create_package ($) {
     }
 
     my $cmd;
+    my $file_type;
+    my $filename;
     foreach my $c (@cpts) {
         OSCAR::Logger::oscar_log_subsection "Packaging $c...";
         my $source = OSCAR::ConfigFile::get_value ($config_file, $c, "source");
         my ($method, $url) = split (",", $source);
         if ($method eq "svn") {
             # We check out SVN
+            $file_type = "svn";
             $cmd = "cd $packaging_dir; svn co $url $c ";
             $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
@@ -215,12 +220,25 @@ sub create_package ($) {
         } elsif ($method eq "wget") {
             require OSCAR::Defs;
             my $dest = "$packaging_dir/$c";
+            $filename = File::Basename::basename($url);
+            if (!OSCAR::Utils::is_a_valid_string ($filename)) {
+                return "ERROR: Impossible to get file name ($filename)";
+            }
             OSCAR::FileUtils::download_file ($url, "$dest", "wget",
                 OSCAR::Defs::OVERWRITE());
+            $file_type = OSCAR::FileUtils::file_type ("$dest/$filename");
         } else {
             carp "ERROR: Unknow method to access source ($method)";
             push (@failed_comp, $c);
         }
+
+        # We check that we correctly detected the file type of the source we
+        # got, this is mandatory to know what to do with it.
+        if (!OSCAR::Utils::is_a_valid_string ($file_type)) {
+            return "ERROR: Impossible to get the file type";
+        }
+        oscar_log_subsection "File type: $file_type (see OSCAR::Defs for ".
+            "translation)";
 
         # We check the prereqs (including dependencies with other packages)
         if (prepare_prereqs ("$packaging_dir/$c")) {
@@ -238,19 +256,31 @@ sub create_package ($) {
             $cmd .= "$build_cmd && ";
         }
         if ($os->{pkg} eq "deb") {
-            $cmd .= "make deb PKGDEST=$pkg_destdir ";
-            $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+            if ($file_type eq "svn") {
+                $cmd .= "make deb PKGDEST=$pkg_destdir ";
+                $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+            } else {
+                oscar_log_subsection ("ERROR: Unknown type ($file_type)");
+                push (@failed_comp, $c);
+            }
         } elsif ($os->{pkg} eq "rpm") {
-            $cmd .= "make rpm PKGDEST=$pkg_destdir ";
-            # On some fedora core releases, we cannot use /usr/src/redhat
-            if (($os->{compat_distro} eq "fc") 
-                && ($os->{compat_distrover} >= 10)) {
-                $cmd .= " SOURCEDIR=~/rpmbuild/SOURCES ";
+            if ($file_type eq "svn") {
+                $cmd .= "make rpm PKGDEST=$pkg_destdir ";
+                # On some fedora core releases, we cannot use /usr/src/redhat
+                if (($os->{compat_distro} eq "fc") 
+                    && ($os->{compat_distrover} >= 10)) {
+                    $cmd .= " SOURCEDIR=~/rpmbuild/SOURCES ";
+                }
+                if ($os->{distro} eq "suse") {
+                    $cmd .= " SOURCEDIR=/usr/src/packages/SOURCES ";
+                }
+                $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+            } elsif ($file_type eq OSCAR::Defs::SRPM()) {
+                $cmd .= "buildrpm --rebuild $filename";
+            } else {
+                oscar_log_subsection ("ERROR: Unknown type ($file_type)");
+                push (@failed_comp, $c);
             }
-            if ($os->{distro} eq "suse") {
-                $cmd .= " SOURCEDIR=/usr/src/packages/SOURCES ";
-            }
-            $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
         } else {
             die "ERROR: Unknow binary package format ($os->{pkg})";
         }
