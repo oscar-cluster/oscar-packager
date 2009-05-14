@@ -276,7 +276,7 @@ sub create_package ($) {
                 }
                 $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             } elsif ($file_type eq OSCAR::Defs::SRPM()) {
-                $cmd .= "buildrpm --rebuild $filename";
+                $cmd .= "rpmbuild --rebuild $filename";
             } else {
                 oscar_log_subsection ("ERROR: Unknown type ($file_type)");
                 push (@failed_comp, $c);
