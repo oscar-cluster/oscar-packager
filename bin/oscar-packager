@@ -212,7 +212,7 @@ sub create_package ($) {
         my ($method, $url) = split (",", $source);
         if ($method eq "svn") {
             # We check out SVN
-            $file_type = "svn";
+            $file_type = OSCAR::Defs::SVN();
             $cmd = "cd $packaging_dir; svn co $url $c ";
             $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
@@ -247,34 +247,50 @@ sub create_package ($) {
             push (@failed_comp, $c);
         }
 
-        # We compile
+	# We make sure we pre-process the downloaded files.
+        if ($file_type eq OSCAR::Defs::TARBALL()) {
+            my $pre_cmd = "cd $packaging_dir/$c; tar xzf $filename";
+            system($pre_cmd);
+        }
+
+        # We check if a precommand specified by the user needs to be executed
         $cmd = "cd $packaging_dir/$c; ";
         my $build_cmd = OSCAR::ConfigFile::get_value ($config_file,
                                                         $c,
                                                         "precommand");
         if (defined ($build_cmd)) {
-            $cmd .= "$build_cmd && ";
+            system ($build_cmd);
         }
+
+        # We compile the package
+
         if ($os->{pkg} eq "deb") {
-            if ($file_type eq "svn") {
-                $cmd .= "make deb PKGDEST=$pkg_destdir ";
-                $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+            if ($file_type eq OSCAR::Defs::SVN() 
+                || $file_type eq OSCAR::Defs::TARBALL()) {
+                if (-f "$packaging_dir/$c/Makefile") {
+                    $cmd .= "make deb PKGDEST=$pkg_destdir ";
+                    $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+                }
             } else {
                 oscar_log_subsection ("ERROR: Unknown type ($file_type)");
                 push (@failed_comp, $c);
             }
         } elsif ($os->{pkg} eq "rpm") {
-            if ($file_type eq "svn") {
-                $cmd .= "make rpm PKGDEST=$pkg_destdir ";
-                # On some fedora core releases, we cannot use /usr/src/redhat
-                if (($os->{compat_distro} eq "fc") 
-                    && ($os->{compat_distrover} >= 10)) {
-                    $cmd .= " SOURCEDIR=~/rpmbuild/SOURCES ";
+            if ($file_type eq OSCAR::Defs::SVN()
+                || $file_type eq OSCAR::Defs::TARBALL()) {
+                if (-f "$packaging_dir/$c/Makefile") {
+                    $cmd .= "make rpm PKGDEST=$pkg_destdir ";
+                    # On some fedora core releases, we cannot use 
+                    # /usr/src/redhat
+                    if (($os->{compat_distro} eq "fc") 
+                        && ($os->{compat_distrover} >= 10)) {
+                        $cmd .= " SOURCEDIR=~/rpmbuild/SOURCES ";
+                    }
+                    if ($os->{distro} eq "suse") {
+                        $cmd .= " SOURCEDIR=/usr/src/packages/SOURCES ";
+                    }
+                    $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
                 }
-                if ($os->{distro} eq "suse") {
-                    $cmd .= " SOURCEDIR=/usr/src/packages/SOURCES ";
-                }
-                $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             } elsif ($file_type eq OSCAR::Defs::SRPM()) {
                 $cmd .= "rpmbuild --rebuild $filename";
             } else {
