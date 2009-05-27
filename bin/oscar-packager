@@ -253,7 +253,10 @@ sub create_package ($) {
 	# We make sure we pre-process the downloaded files.
         if ($file_type eq OSCAR::Defs::TARBALL()) {
             my $pre_cmd = "cd $packaging_dir/$c; tar xzf $filename";
-            system($pre_cmd);
+            if (system($pre_cmd)) {
+                carp "ERROR: Impossible to execute $pre_cmd";
+                push (@failed_comp, $c);
+            }
         }
 
         # We check if a precommand specified by the user needs to be executed
@@ -262,7 +265,10 @@ sub create_package ($) {
                                                         $c,
                                                         "precommand");
         if (defined ($build_cmd)) {
-            system ($build_cmd);
+            if (system ($build_cmd)) {
+                carp "ERROR: Impossible to execute $cmd";
+                push (@failed_comp, $c);
+            }
         }
 
         # We compile the package
