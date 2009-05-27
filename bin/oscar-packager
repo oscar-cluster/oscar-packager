@@ -374,7 +374,7 @@ OSCAR::Logger::oscar_log_section ("OSCAR Packager Starting...");
 if ($core && OSCAR::Utils::is_element_in_array($core, @releases) ) {
     $config_file = "$config_file_path/core_stable_$core.cfg";
     $opkg_conffile = "$config_file_path/core_opkgs_$core.cfg";
-    OSCAR::Logger::oscar_log_subsection ("Packaging stable OSCAR core");
+    OSCAR::Logger::oscar_log_subsection ("Packaging stable OSCAR core ($core)");
 }
 
 if ($core && !OSCAR::Utils::is_element_in_array($core, @releases)) {
@@ -386,7 +386,7 @@ if ($core && !OSCAR::Utils::is_element_in_array($core, @releases)) {
 if ($included && OSCAR::Utils::is_element_in_array($included, @releases)) {
     $config_file = "$config_file_path/included_stable_$included.cfg";
     $opkg_conffile = "$config_file_path/included_opkgs_$included.cfg";
-    OSCAR::Logger::oscar_log_subsection ("Packaging stable included OPKGs");
+    OSCAR::Logger::oscar_log_subsection ("Packaging stable included OPKGs ($included)");
 }
 
 if ($included && !OSCAR::Utils::is_element_in_array($included, @releases)) {
