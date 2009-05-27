@@ -131,7 +131,10 @@ sub create_opkgs_metapkg ($) {
             $cmd = "cd $packaging_dir; svn co $url opkg-$c ";
             $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
-            system $cmd;
+            if (system $cmd) {
+                carp "ERROR: Impossible to execute $cmd";
+                push (@failed_comp, $c);
+            }
         } else {
             carp "ERROR: Unknow method to access source ($method)";
             push (@failed_comp, $c);
