@@ -261,7 +261,7 @@ sub create_package ($) {
 
         # We check if a precommand specified by the user needs to be executed
         $cmd = "cd $packaging_dir/$c; ";
-        my $build_cmd = OSCAR::ConfigFile::get_value ($config_file,
+        my $build_cmd = $cmd . OSCAR::ConfigFile::get_value ($config_file,
                                                         $c,
                                                         "precommand");
         if (defined ($build_cmd)) {
