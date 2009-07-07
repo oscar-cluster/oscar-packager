@@ -174,6 +174,38 @@ sub create_opkgs_metapkg ($) {
     return @failed_comp
 }
 
+# Basic checks to see if everything is fine.
+#
+# Return: 0 if success, -1 else.
+sub sanity_check () {
+
+    oscar_log_subsection "Sanity check...";
+    # First we check the command is executed as root.
+    if ($< != 0) {
+        carp "ERROR: You must be 'root' to run this script.";
+        return -1;
+    }
+    oscar_log_subsection "[INFO] Command executed as root";
+
+    # We look for opkgc
+    if (!-f "/usr/local/bin/opkgc" && !-f "/usr/bin/opkgc") {
+        carp "ERROR: OPKGC is not installed";
+        return -1;
+    }
+    oscar_log_subsection "[INFO] OPKGC available";
+
+    # We look for packman
+    if (!-f "/usr/bin/packman") {
+        carp "ERROR: Packman is not available";
+        return -1;
+    }
+    oscar_log_subsection "[INFO] Packman available";
+
+    oscar_log_subsection "Sanity check: ok";
+
+    return 0;
+}
+
 # Return: an array of errors (most of the time the OPKG for each the failure
 #         occured.
 sub create_package ($) {
@@ -253,7 +285,7 @@ sub create_package ($) {
             push (@failed_comp, $c);
         }
 
-	# We make sure we pre-process the downloaded files.
+        # We make sure we pre-process the downloaded files.
         if ($file_type eq OSCAR::Defs::TARBALL()) {
             my $pre_cmd = "cd $packaging_dir/$c; tar xzf $filename";
             if (system($pre_cmd)) {
@@ -366,6 +398,10 @@ if ($debug) {
 }
 
 $ENV{UNSIGNED_OSCAR_PKG} =1 if ($unsigned);
+
+if (sanity_check ()) {
+    die "ERROR: System configuration not compliant with oscar-packager.";
+}
 
 my @releases = OSCAR::Packager::available_releases();
 
