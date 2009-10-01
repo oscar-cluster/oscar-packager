@@ -3,7 +3,7 @@ DESTDIR=
 TOPDIR=..
 include $(TOPDIR)/Config.mk
 
-SCRIPTS := oscar-packager build_rpms
+SCRIPTS := oscar-packager build_rpms build_package
 SUBDIRS := 
 
 doc:

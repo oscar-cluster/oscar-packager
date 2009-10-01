@@ -1,0 +1,129 @@
+#!/usr/bin/perl
+#
+
+# Copyright (c) 2008-2009 Oak Ridge National Laboratory
+#                         Geoffroy Vallee <valleegr@ornl.gov>
+#                         All rights reserved
+
+# This a generic script we use to package third-party software (RPM or Deb
+# packages).
+
+use strict;
+use Getopt::Long;
+use OSCAR::Utils;
+use OSCAR::FileUtils;
+use OSCAR::Defs;
+use OSCAR::Logger;
+use File::Basename;
+use File::Path;
+use Carp;
+
+my ($type, $output, $url, $verbose, $pkg);
+
+# Getopt::Long::Configure("pass_through");
+GetOptions(
+            "type=s"            => \$type,
+            "output=s"          => \$output,
+            "url=s"             => \$url,
+            "package-name=s"    => \$pkg,
+            "verbose"           => \$verbose,
+          );
+
+if (!OSCAR::Utils::is_a_valid_string ($type)
+    || !OSCAR::Utils::is_a_valid_string ($output)
+    || !OSCAR::Utils::is_a_valid_string ($url)
+    || !OSCAR::Utils::is_a_valid_string ($pkg)) {
+    die "ERROR: Invalid parameter(s)";
+}
+
+# Now we correctly set OSCAR_VERBOSE to be sure we get all the output wee want
+my $initial_verbose = $ENV{OSCAR_VERBOSE};
+if ($verbose) {
+    $ENV{OSCAR_VERBOSE} = 5;
+}
+
+my $filename = File::Basename::basename ($url);
+
+# We create a log file specific to oscar-packager
+my $log_file = "/var/log/oscar/build_package_$filename.log";
+OSCAR::Logger::init_log_file ($log_file);
+OSCAR::Logger::oscar_log_section ("Creating binary package from $filename");
+
+# GV: we currently assume that we are dealing with tarballs
+my $basename = File::Basename::basename($url, ".tar.gz");
+my @dirs = glob ("$output/$pkg*");
+my $dir;
+foreach my $d (@dirs) {
+    if (-d $d) {
+        $dir = $d;
+        last;
+    }
+}
+
+# As parameter, the user must specify "rpm" or "deb" to know which binary
+# package format should be used.
+my $package_type = $type;
+
+sub build_deb_pkgs () {
+    my $cmd = "cp -rf debian $dir";
+    OSCAR::Logger::oscar_log_subsection ("Copying Debian scripts ($cmd)...");
+    if (system ($cmd)) {
+        carp "ERROR: Impossible to execute $cmd";
+        return -1;
+    }
+
+    $cmd = "cd $dir && dpkg-buildpackage -rfakeroot -us -uc";
+    OSCAR::Logger::oscar_log_subsection ("Creating the Debian package ($cmd)...");
+    if (system ($cmd)) {
+        carp "ERROR: Impossible to execute $cmd";
+        return -1;
+    }
+
+    return 0;
+}
+
+sub build_rpm_pkgs () {
+    carp "ERROR: Not yet implemented";
+    return -1;
+}
+
+
+if (!OSCAR::Utils::is_a_valid_string ($package_type)
+    || ($package_type ne "rpm" && $package_type ne "deb")) {
+    die "ERROR: you must specify \"rpm\" or \"deb\", so we can know what ".
+        "kind of binary packages you want to create";
+}
+
+OSCAR::Logger::oscar_log_subsection ("Creation $package_type packages...");
+
+# First we download the source tarball
+OSCAR::FileUtils::download_file ($url,
+                                 $output,
+                                 "wget",
+                                 OSCAR::Defs::NO_OVERWRITE());
+
+# Doing some clean-up
+File::Path::rmtree ("$dir");
+
+# We untar the tarball
+my $cmd = "cd $output; tar xzf $filename";
+OSCAR::Logger::oscar_log_subsection ("Untaring $output/$filename ($cmd)...");
+if (system($cmd)) {
+    die "ERROR: Impossible to execute $cmd";
+}
+
+if ($package_type eq "deb") {
+    build_deb_pkgs ();
+} elsif ($package_type eq "rpm") {
+    build_rpm_pkgs ();
+} else {
+    die "ERROR: Unknown package type ($package_type)"
+}
+
+# Before to exit, we restore the initial OSCAR_VERBOSE value
+if (defined $initial_verbose) {
+    $ENV{OSCAR_VERBOSE} = $initial_verbose;
+}
+
+exit 0;
+
