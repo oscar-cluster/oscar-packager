@@ -213,6 +213,14 @@ sub create_package ($) {
     my @failed_comp;
 
     #
+    # We do some basic testing
+    #
+    if (! -f $config_file) {
+        carp "ERROR: Config file $config_file does not exist";
+        return -1;
+    }
+
+    #
     # We get the destination directory for the packages
     #
     $pkg_destdir = get_pkg_dest ();
@@ -296,10 +304,11 @@ sub create_package ($) {
 
         # We check if a precommand specified by the user needs to be executed
         $cmd = "cd $packaging_dir/$c; ";
-        my $build_cmd = $cmd . OSCAR::ConfigFile::get_value ($config_file,
-                                                        $c,
-                                                        "precommand");
-        if (defined ($build_cmd)) {
+        my $precmd = OSCAR::ConfigFile::get_value ($config_file,
+                                                   $c,
+                                                   "precommand");
+        if (defined ($precmd)) {
+            my $build_cmd = $cmd . $precmd;
             if (system ($build_cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
                 push (@failed_comp, $c);
@@ -307,13 +316,12 @@ sub create_package ($) {
         }
 
         # We compile the package
-
         if ($os->{pkg} eq "deb") {
             if ($file_type eq OSCAR::Defs::SVN() 
                 || $file_type eq OSCAR::Defs::TARBALL()) {
                 if (-f "$packaging_dir/$c/Makefile") {
                     $cmd .= "make deb PKGDEST=$pkg_destdir ";
-                    $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+#                    $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
                 }
             } else {
                 oscar_log_subsection ("ERROR: Unknown type ($file_type)");
@@ -333,7 +341,7 @@ sub create_package ($) {
                     if ($os->{distro} eq "suse") {
                         $cmd .= " SOURCEDIR=/usr/src/packages/SOURCES ";
                     }
-                    $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+#                    $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
                 }
             } elsif ($file_type eq OSCAR::Defs::SRPM()) {
                 $cmd .= "rpmbuild --rebuild $filename";
