@@ -8,7 +8,8 @@ FILES := core_stable_6.0.cfg core_unstable.cfg included_stable_6.0.cfg \
 	core_stable_6.0.2.cfg core_stable_6.0.1.cfg included_stable_6.0.1.cfg \
 	included_stable_6.0.2.cfg included_opkgs_unstable.cfg \
 	included_opkgs_6.0.2.cfg core_stable_6.0.3.cfg core_opkgs_6.0.3.cfg \
-	included_stable_6.0.3.cfg core_opkgs_6.0.4.cfg core_stable_6.0.4.cfg
+	included_stable_6.0.3.cfg core_opkgs_6.0.4.cfg core_stable_6.0.4.cfg \
+	included_stable_6.0.4.cfg included_opkgs_6.0.3.cfg
 SUBDIRS :=
 
 all:
