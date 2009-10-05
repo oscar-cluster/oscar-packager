@@ -163,6 +163,7 @@ sub create_opkgs_metapkg ($) {
     }
 
     $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
+    $cmd .= " --verbose" if $debug;
     if (system($cmd)) {
         carp "ERROR: Impossible to execute $cmd";
         push (@failed_comp, $cmd);
