@@ -483,7 +483,7 @@ sub install_requires {
         }
 	my $distro_id = "$os->{distro}-$os->{distro_version}-$os->{arch}";
         my $cmd = "/usr/bin/packman install ".join(" ",@install_stack)." --distro $distro_id";
-        $cmd .= " --verbose" if $debug;
+        $cmd .= " --verbose" if $verbose;
         OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
         if (system($cmd)) {
             print "Warning: failed to install requires: ".join(" ",@reqs)."\n";
