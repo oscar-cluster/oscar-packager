@@ -25,13 +25,14 @@ use File::Path;
 use Carp;
 use warnings "all";
 
-my ($core, $included, $verbose, $debug, $available_releases, $unsigned);
+my ($all, $core, $included, $verbose, $debug, $available_releases, $unsigned);
 
 our $packaging_dir = "/tmp/oscar-packager";
 use vars qw ($pkg_destdir);
 
 # Getopt::Long::Configure("pass_through");
 GetOptions(
+        "all=s"                             => \$all,
         "core=s"                            => \$core,
         "included=s"                        => \$included,
         "supported-releases"                => \$available_releases,
@@ -41,6 +42,9 @@ GetOptions(
         "v"                                 => \$verbose,
         "help"                              => \&help_and_exit,
         ) || help_and_die();
+
+# Global variables
+my $config_file_path = "/etc/oscar/oscar-packager";
 
 sub pkgdir_cleanup () {
     if (-d $packaging_dir) {
@@ -387,7 +391,89 @@ sub help_and_exit {
     exit 0;
 }
 
-my $config_file_path = "/etc/oscar/oscar-packager";
+sub do_packaging ($$) {
+    my ($config_file, $opkg_conffile) = @_;
+    my @failed_comp;
+
+    # We now create binary packages for each components.
+    if (! -f $config_file) {
+        die "ERROR: Impossible to find the configuration file ($config_file)";
+    }
+    @failed_comp = create_package ($config_file);
+    if (scalar (@failed_comp) > 0) {
+        carp "Errors occured during the OSCAR packaging.\n".
+            "OSCAR components that failed are: ";
+        OSCAR::Utils::print_array (@failed_comp);
+        exit 1;
+    }
+
+    # We now create the meta-package for all core OPKGs.
+    if (-f $opkg_conffile) {
+        @failed_comp = create_opkgs_metapkg ($opkg_conffile);
+        if (scalar (@failed_comp) > 0) {
+            carp "Errors occured during the creation of meta-packages for ".
+                "available OPKGs";
+            OSCAR::Utils::print_array (@failed_comp);
+            exit 1;
+        }
+    } else {
+        print "[INFO] No configuration for OPKGs found, skipping that step ".
+            "($opkg_conffile)\n";
+    }
+
+    return @failed_comp;
+}
+
+sub package_core ($$$) {
+    my ($core, $releases, $conffilepath) = @_;
+    my ($config_file, $opkg_conffile);
+
+    if (!defined $core) {
+        return undef;
+    }
+
+    if ($core && OSCAR::Utils::is_element_in_array($core, @$releases) ) {
+        $config_file = "$conffilepath/core_stable_$core.cfg";
+        $opkg_conffile = "$conffilepath/core_opkgs_$core.cfg";
+        OSCAR::Logger::oscar_log_subsection ("Packaging stable OSCAR core ($core)");
+    }
+
+    if ($core && !OSCAR::Utils::is_element_in_array($core, @$releases)) {
+        $config_file = "$conffilepath/core_unstable.cfg";
+        $opkg_conffile = "$conffilepath/core_opkgs_unstable.cfg";
+        OSCAR::Logger::oscar_log_subsection ("Packaging unstable OSCAR core");
+    }
+
+    my @failed_comp = do_packaging ($config_file, $opkg_conffile);
+
+    return @failed_comp;
+}
+
+sub package_included ($$$) {
+    my ($included, $releases, $conffilepath) = @_;
+    my ($config_file, $opkg_conffile);
+
+    if (!defined $included) {
+        return undef;
+    }
+
+    if ($included && OSCAR::Utils::is_element_in_array($included, @$releases)) {
+        $config_file = "$conffilepath/included_stable_$included.cfg";
+        $opkg_conffile = "$conffilepath/included_opkgs_$included.cfg";
+        OSCAR::Logger::oscar_log_subsection ("Packaging stable included OPKGs ($included)");
+    }
+
+    if ($included && !OSCAR::Utils::is_element_in_array($included, @$releases)) {
+        $config_file = "$conffilepath/included_unstable.cfg";
+        $opkg_conffile = "$conffilepath/included_opkgs_unstable.cfg";
+        OSCAR::Logger::oscar_log_subsection ("Packaging unstable included OPKGs");
+    }
+
+    my @failed_comp = do_packaging ($config_file, $opkg_conffile);
+
+    return @failed_comp;
+}
+
 my $config_file; # This variable points to the config file for the components
                  # we try to package.
 my $opkg_conffile; # This variable points to the associated OPKGs.
@@ -428,59 +514,21 @@ if ($available_releases) {
 
 OSCAR::Logger::oscar_log_section ("OSCAR Packager Starting...");
 
-if ($core && OSCAR::Utils::is_element_in_array($core, @releases) ) {
-    $config_file = "$config_file_path/core_stable_$core.cfg";
-    $opkg_conffile = "$config_file_path/core_opkgs_$core.cfg";
-    OSCAR::Logger::oscar_log_subsection ("Packaging stable OSCAR core ($core)");
+if ($all) {
+    $core = $all;
+    $included = $all;
 }
 
-if ($core && !OSCAR::Utils::is_element_in_array($core, @releases)) {
-    $config_file = "$config_file_path/core_unstable.cfg";
-    $opkg_conffile = "$config_file_path/core_opkgs_unstable.cfg";
-    OSCAR::Logger::oscar_log_subsection ("Packaging unstable OSCAR core");
-}
-
-if ($included && OSCAR::Utils::is_element_in_array($included, @releases)) {
-    $config_file = "$config_file_path/included_stable_$included.cfg";
-    $opkg_conffile = "$config_file_path/included_opkgs_$included.cfg";
-    OSCAR::Logger::oscar_log_subsection ("Packaging stable included OPKGs ($included)");
-}
-
-if ($included && !OSCAR::Utils::is_element_in_array($included, @releases)) {
-    $config_file = "$config_file_path/included_unstable.cfg";
-    $opkg_conffile = "$config_file_path/included_opkgs_unstable.cfg";
-    OSCAR::Logger::oscar_log_subsection ("Packaging unstable included OPKGs");
-}
-
-if (!defined $config_file) {
-    die "ERROR: Invalid parameters";
-}
-
-# We now create binary packages for each components.
-if (! -f $config_file) {
-    die "ERROR: Impossible to find the configuration file ($config_file)";
-}
-@failed_comp = create_package ($config_file);
+@failed_comp = package_core ($core, \@releases, $config_file_path);
 if (scalar (@failed_comp) > 0) {
-    carp "Errors occured during the OSCAR packaging.\n".
-          "OSCAR components that failed are: ";
-    OSCAR::Utils::print_array (@failed_comp);
-    exit 1;
+    die "ERROR: Impossible to package the following component: ".
+        join (", ", @failed_comp);
 }
-
-# We now create the meta-package for all core OPKGs.
-if (-f $opkg_conffile) {
-    @failed_comp = create_opkgs_metapkg ($opkg_conffile);
-    if (scalar (@failed_comp) > 0) {
-        carp "Errors occured during the creation of meta-packages for ".
-             "available OPKGs";
-        OSCAR::Utils::print_array (@failed_comp);
-        exit 1;
-    }
-} else {
-    print "[INFO] No configuration for OPKGs found, skipping that step ".
-          "($opkg_conffile)\n";
-}   
+@failed_comp = package_included ($all, \@releases, $config_file_path);
+if (scalar (@failed_comp) > 0) {
+    die "ERROR: Impossible to package the following OPKGs: ".
+        join (", ", @failed_comp);
+}
 
 # Before to exit, we restore the initial OSCAR_VERBOSE value
 if (defined $initial_verbose) {
@@ -510,6 +558,10 @@ oscar-packager OPTIONS
 Recognized options include:
 
 =over 8
+
+=item --all [VERSION]
+
+Package a given release of OSCAR, both core and included OPKGs. To package the development version, use "unstable" as VERSION.
 
 =item --core [VERSION]
 
