@@ -245,7 +245,7 @@ sub prepare_rpm_env ($$$$$) {
         $env = $conf{env};
     }
     if (! -d "$dest") {
-        print "Creating directory: $dest\n";
+        OSCAR::Logger::oscar_log_subsection ("Creating directory: $dest");
         eval { File::Path::mkpath ("$dest") };
         if ($@) {
             carp "ERROR: Couldn't create $dest: $@";
@@ -266,7 +266,7 @@ sub prepare_rpm_env ($$$$$) {
     }
     $ENV{RPMBUILDOPTS} = $opt;
     if ($opt) {
-        print "setting \$RPMBUILDOPTS=$opt\n";
+        OSCAR::Logger::oscar_log_subsection ("Setting \$RPMBUILDOPTS=$opt...");
     }
     return $opt;
 }
@@ -343,13 +343,10 @@ sub create_binary ($$$$) {
             $cmd = "$binaries_path/build_rpms --only-rpm $download_dir/$source_file $s";
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             if (!$test) {
-                my $ret = system($cmd);
-                if ($ret) {
-                    carp "ERROR: Command execution failed: $!";
-                    return $ret;
-                } else {
-                    print "\nOK\n";
-                }
+                if (system($cmd)) {
+                    carp "ERROR: Command execution failed: $! ($cmd)";
+                    return -1;
+                } 
             }
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
             # We copy the tarball in /usr/src/redhat/SOURCES
@@ -461,7 +458,7 @@ sub install_requires {
     my @installed_reqs = ();
 
     my @reqs = split(" ",$requires);
-    print "Requires: ".join(" ",@reqs)."\n";
+    OSCAR::Logger::oscar_log_subsection ("Requires: ".join(" ",@reqs));
 
     my @install_stack;
     for my $r (@reqs) {
@@ -486,7 +483,8 @@ sub install_requires {
         }
 	my $distro_id = "$os->{distro}-$os->{distro_version}-$os->{arch}";
         my $cmd = "/usr/bin/packman install ".join(" ",@install_stack)." --distro $distro_id";
-        print "Executing: $cmd\n" if $verbose;
+        $cmd .= " --verbose" if $debug;
+        OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
         if (system($cmd)) {
             print "Warning: failed to install requires: ".join(" ",@reqs)."\n";
         }
