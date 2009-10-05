@@ -64,14 +64,20 @@ foreach my $d (@dirs) {
 # package format should be used.
 my $package_type = $type;
 
-sub build_deb_pkgs ($$) {
-    my ($output, $filename) = @_;
+sub build_deb_pkgs ($$$) {
+    my ($output, $filename, $basename) = @_;
 
     # We untar the tarball
     my $cmd = "cd $output; tar xzf $filename";
     OSCAR::Logger::oscar_log_subsection ("Untaring $output/$filename ($cmd)...");
     if (system($cmd)) {
         carp "ERROR: Impossible to execute $cmd";
+        return -1;
+    }
+    
+    my $dir = "$output/$basename";
+    if (! -d $dir) {
+        carp "ERROR: Directory $dir does not exist";
         return -1;
     }
 
@@ -136,7 +142,7 @@ OSCAR::FileUtils::download_file ($url,
 File::Path::rmtree ("$dir");
 
 if ($package_type eq "deb") {
-    build_deb_pkgs ($output, $filename);
+    build_deb_pkgs ($output, $filename, $basename);
 } elsif ($package_type eq "rpm") {
     build_rpm_pkgs ($output, $filename);
 } else {
