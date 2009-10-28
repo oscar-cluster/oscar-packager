@@ -393,7 +393,7 @@ sub help_and_exit {
 
 sub do_packaging ($$) {
     my ($config_file, $opkg_conffile) = @_;
-    my @failed_comp;
+    my @failed_comp = ();
 
     # We now create binary packages for each components.
     if (! -f $config_file) {
@@ -427,9 +427,10 @@ sub do_packaging ($$) {
 sub package_core ($$$) {
     my ($core, $releases, $conffilepath) = @_;
     my ($config_file, $opkg_conffile);
+    my @failed_comp = ();
 
     if (!defined $core) {
-        return undef;
+        return @failed_comp;
     }
 
     if ($core && OSCAR::Utils::is_element_in_array($core, @$releases) ) {
@@ -444,7 +445,7 @@ sub package_core ($$$) {
         OSCAR::Logger::oscar_log_subsection ("Packaging unstable OSCAR core");
     }
 
-    my @failed_comp = do_packaging ($config_file, $opkg_conffile);
+    @failed_comp = do_packaging ($config_file, $opkg_conffile);
 
     return @failed_comp;
 }
@@ -452,9 +453,10 @@ sub package_core ($$$) {
 sub package_included ($$$) {
     my ($included, $releases, $conffilepath) = @_;
     my ($config_file, $opkg_conffile);
+    my @failed_comp = ();
 
     if (!defined $included) {
-        return undef;
+        return @failed_comp;
     }
 
     if ($included && OSCAR::Utils::is_element_in_array($included, @$releases)) {
@@ -469,7 +471,7 @@ sub package_included ($$$) {
         OSCAR::Logger::oscar_log_subsection ("Packaging unstable included OPKGs");
     }
 
-    my @failed_comp = do_packaging ($config_file, $opkg_conffile);
+    @failed_comp = do_packaging ($config_file, $opkg_conffile);
 
     return @failed_comp;
 }
@@ -477,7 +479,6 @@ sub package_included ($$$) {
 my $config_file; # This variable points to the config file for the components
                  # we try to package.
 my $opkg_conffile; # This variable points to the associated OPKGs.
-my @failed_comp;
 
 # We create a log file specific to oscar-packager
 my $log_file = "/var/log/oscar/oscar-packager.log";
@@ -519,15 +520,15 @@ if ($all) {
     $included = $all;
 }
 
-@failed_comp = package_core ($core, \@releases, $config_file_path);
+my @failed_comp = package_core ($core, \@releases, $config_file_path);
 if (scalar (@failed_comp) > 0) {
-    die "ERROR: Impossible to package the following component: ".
-        join (", ", @failed_comp);
+    die "ERROR: Impossible to package the following component (".
+        scalar(@failed_comp).": ".join (", ", @failed_comp);
 }
-@failed_comp = package_included ($all, \@releases, $config_file_path);
+@failed_comp = package_included ($included, \@releases, $config_file_path);
 if (scalar (@failed_comp) > 0) {
-    die "ERROR: Impossible to package the following OPKGs: ".
-        join (", ", @failed_comp);
+    die "ERROR: Impossible to package the following OPKGs (".
+        scalar(@failed_comp).": ".join (", ", @failed_comp);
 }
 
 # Before to exit, we restore the initial OSCAR_VERBOSE value
