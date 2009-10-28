@@ -66,26 +66,72 @@ sub build_deb_pkgs ($$$) {
     return 0;
 }
 
-# Prepare everything for the creation of a RPM, and then actually create the RPM:
-#   - copy the source file into the appropriate rpm directory (if needed),
-#   - find the spec file(s) (mandatory),
-#   - create the RPM.
-#
-# Return: 0 if success, -1 else.
-sub build_rpm_pkgs ($$) {
-    my ($output, $filename) = @_;
+sub copy_files ($$) {
+    my ($files, $output) = @_;
 
-    #
-    # We first copy the source file (if needed)
-    #
-    if (defined $filename) {
-        # TODO: We should use a RPM marco to figure out where the source files are stored
-        my $cmd = "cp $output/$filename /usr/src/redhat/SOURCES/";
+    if (!defined($files)) {
+        carp "ERROR: Invalid list of files";
+        return -1;
+    }
+
+    if (! -d $output) {
+        carp "ERROR: $output does not exist";
+        return -1;
+    }
+
+    my $cmd;
+    foreach my $file (@$files) {
+        $cmd = "cp -f $file $output";
         OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
         if (system ($cmd)) {
             carp "ERROR: Impossible to execute $cmd";
             return -1;
         }
+    }
+
+    return 0;
+}
+
+# Prepare everything for the creation of a RPM, and then actually create the RPM:
+#   - copy the source file into the appropriate rpm directory (if needed),
+#   - copy the available patches into the appropriate rpm directory.
+#   - find the spec file(s) (mandatory),
+#   - create the RPM.
+#
+# Return: 0 if success, -1 else.
+sub build_rpm_pkgs ($$$) {
+    my ($pkg, $output, $filename) = @_;
+
+    # Where do we need need to copy the source file for the creation of the RPMs?
+    my $source_dir = `/bin/rpm --eval %{_topdir}`;
+    chomp ($source_dir);
+    $source_dir .= "/SOURCES/";
+    if (!-d $source_dir) {
+        carp "ERROR: Impossible to detect where to copy source for the ".
+             "RPMs ($source_dir)";
+        return -1;
+    }
+
+    #
+    # We first copy the source file (if needed)
+    #
+    if (defined $filename) {
+        my $cmd = "cp $output/$filename $source_dir";
+        OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
+        if (system ($cmd)) {
+            carp "ERROR: Impossible to execute $cmd";
+            return -1;
+        }
+    }
+
+    #
+    # Do we have any patches to use?
+    #
+    my @patch_files = glob ("rpm/*.patch");
+    OSCAR::Logger::oscar_log_subsection ("Copying the following patch files: "
+        .join (",", @patch_files));
+    if (scalar(@patch_files) > 0) {
+        copy_files (\@patch_files, $source_dir);
     }
 
     #
@@ -100,12 +146,30 @@ sub build_rpm_pkgs ($$) {
     # create the RPM.
     #
     my $cmd;
+    my $rpm_dir = `rpm --eval %{_topdir}`;
+    chomp ($rpm_dir);
+    $rpm_dir .= "/RPMS/";
+    if (! -d $rpm_dir) {
+        carp "ERROR: Impossible to figure out where the RPMs are stored";
+        return -1;
+    }
+    my @rpms;
+    my $rpm_arch = `rpm --eval %{_arch}`;
+    chomp ($rpm_arch);
     foreach my $spec (@spec_files) {
         $cmd = "rpmbuild -bb $spec";
         OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
         if (system ($cmd)) {
             carp "ERROR: Impossible to execute $cmd";
             return -1;
+        }
+        @rpms = glob ("$rpm_dir/noarch/$pkg*.rpm");
+        if (scalar (@rpms) > 0) {
+            copy_files (\@rpms, $output);
+        }
+        @rpms = glob ("$rpm_dir/$rpm_arch/$pkg*.rpm");
+        if (scalar (@rpms) > 0) {
+            copy_files (\@rpms, $output);
         }
     }
 
@@ -187,7 +251,7 @@ if (OSCAR::Utils::is_a_valid_string ($url)) {
 if ($package_type eq "deb") {
     build_deb_pkgs ($output, $filename, $basename);
 } elsif ($package_type eq "rpm") {
-    build_rpm_pkgs ($output, $filename);
+    build_rpm_pkgs ($pkg, $output, $filename);
 } else {
     die "ERROR: Unknown package type ($package_type)"
 }
