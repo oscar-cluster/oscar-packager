@@ -59,25 +59,6 @@ sub pkgdir_cleanup () {
     return 0;
 }
 
-# This function deals with prereqs for the packaging of a given OSCAR 
-# component. The management of prereqs is based on a build.cfg file at the top
-# directory of the OSCAR component source tree. If the file does not exist, we
-# assume there is no prereq to deal with.
-#
-# Return: -1 if error, 0 else.
-sub prepare_prereqs ($) {
-    my $dir = shift;
-
-    my $build_file = "$dir/build.cfg";
-    if (! -f "$build_file") {
-        OSCAR::Logger::oscar_log_subsection ("No $build_file, no prereqs");
-    } else {
-        OSCAR::Logger::oscar_log_subsection ("Managing prereqs ($build_file)");
-        OSCAR::Packager::package_opkg ($build_file);
-    }
-
-    return 0;
-}
 
 sub get_pkg_dest () {
     #
@@ -292,7 +273,7 @@ sub create_package ($) {
             "translation)";
 
         # We check the prereqs (including dependencies with other packages)
-        if (prepare_prereqs ("$packaging_dir/$c")) {
+        if (OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c")) {
             carp "ERROR: Impossible to manage prereqs for the creation of ".
                     "the binary package";
             push (@failed_comp, $c);

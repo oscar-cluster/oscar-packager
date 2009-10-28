@@ -46,7 +46,11 @@ use OSCAR::Logger;
 use OSCAR::OCA::OS_Detect;
 use OSCAR::Utils;
 
-@EXPORT = qw(package_opkg available_releases);
+@EXPORT = qw(
+            available_releases
+            package_opkg
+            prepare_prereqs
+            );
 
 my $verbose = 1;
 
@@ -596,6 +600,26 @@ sub available_releases () {
     }
 
     return (@releases);
+}
+
+# This function deals with prereqs for the packaging of a given OSCAR 
+# component. The management of prereqs is based on a build.cfg file at the top
+# directory of the OSCAR component source tree. If the file does not exist, we
+# assume there is no prereq to deal with.
+#
+# Return: -1 if error, 0 else.
+sub prepare_prereqs ($) {
+    my $dir = shift;
+
+    my $build_file = "$dir/build.cfg";
+    if (! -f "$build_file") {
+        OSCAR::Logger::oscar_log_subsection ("No $build_file, no prereqs");
+    } else {
+        OSCAR::Logger::oscar_log_subsection ("Managing prereqs ($build_file)");
+        OSCAR::Packager::package_opkg ($build_file);
+    }
+
+    return 0;
 }
 
 

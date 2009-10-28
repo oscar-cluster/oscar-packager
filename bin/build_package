@@ -10,10 +10,12 @@
 
 use strict;
 use Getopt::Long;
-use OSCAR::Utils;
-use OSCAR::FileUtils;
 use OSCAR::Defs;
+use OSCAR::FileUtils;
 use OSCAR::Logger;
+use OSCAR::Packager;
+use OSCAR::Utils;
+use Cwd;
 use File::Basename;
 use File::Path;
 use Carp;
@@ -247,6 +249,14 @@ if (OSCAR::Utils::is_a_valid_string ($url)) {
                                      "wget",
                                      OSCAR::Defs::NO_OVERWRITE());
 }
+
+# We install potential needed dependencies (based on the build.cfg file)
+my $pwd = cwd();
+if (OSCAR::Packager::prepare_prereqs ($pwd)) {
+    die "ERROR: Impossible to manage prereqs for the creation of ".
+        "the binary package";
+}
+
 
 if ($package_type eq "deb") {
     build_deb_pkgs ($output, $filename, $basename);
