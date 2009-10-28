@@ -19,6 +19,7 @@ use File::Path;
 use Carp;
 
 my ($type, $output, $url, $verbose, $pkg);
+use vars qw($log_file);
 
 # Getopt::Long::Configure("pass_through");
 GetOptions(
@@ -29,41 +30,8 @@ GetOptions(
             "verbose"           => \$verbose,
           );
 
-if (!OSCAR::Utils::is_a_valid_string ($type)
-    || !OSCAR::Utils::is_a_valid_string ($output)
-    || !OSCAR::Utils::is_a_valid_string ($url)
-    || !OSCAR::Utils::is_a_valid_string ($pkg)) {
-    die "ERROR: Invalid parameter(s)";
-}
 
-# Now we correctly set OSCAR_VERBOSE to be sure we get all the output wee want
-my $initial_verbose = $ENV{OSCAR_VERBOSE};
-if ($verbose) {
-    $ENV{OSCAR_VERBOSE} = 5;
-}
-
-my $filename = File::Basename::basename ($url);
-
-# We create a log file specific to oscar-packager
-my $log_file = "/var/log/oscar/build_package_$filename.log";
-OSCAR::Logger::init_log_file ($log_file);
-OSCAR::Logger::oscar_log_section ("Creating binary package from $filename");
-
-# GV: we currently assume that we are dealing with tarballs
-my $basename = File::Basename::basename($url, ".tar.gz");
-my @dirs = glob ("$output/$pkg*");
-my $dir;
-foreach my $d (@dirs) {
-    if (-d $d) {
-        $dir = $d;
-        last;
-    }
-}
-
-# As parameter, the user must specify "rpm" or "deb" to know which binary
-# package format should be used.
-my $package_type = $type;
-
+# Return: 0 if success, -1 else.
 sub build_deb_pkgs ($$$) {
     my ($output, $filename, $basename) = @_;
 
@@ -98,6 +66,7 @@ sub build_deb_pkgs ($$$) {
     return 0;
 }
 
+# Return: 0 if success, -1 else.
 sub build_rpm_pkgs ($$) {
     my ($output, $filename) = @_;
     my @spec_files = glob ("rpm/*.spec");
@@ -123,6 +92,59 @@ sub build_rpm_pkgs ($$) {
     return 0;
 }
 
+# Return: 0 if success, -1 else.
+sub prepare_packaging ($$$) {
+    my ($pkg, $output, $log_file) = @_;
+
+    # We create a log file specific to oscar-packager
+    $log_file = "/var/log/oscar/build_package_$pkg.log";
+    OSCAR::Logger::init_log_file ($log_file);
+    OSCAR::Logger::oscar_log_section ("Creating binary package for $pkg");
+
+    my @dirs = glob ("$output/$pkg*");
+    my $dir;
+    foreach my $d (@dirs) {
+        if (-d $d) {
+            $dir = $d;
+            last;
+        }
+    }
+
+    # Doing some clean-up
+    File::Path::rmtree ("$dir");
+
+    return 0;
+}
+
+if (!OSCAR::Utils::is_a_valid_string ($type)
+    || !OSCAR::Utils::is_a_valid_string ($output)
+    || !OSCAR::Utils::is_a_valid_string ($pkg)) {
+    die "ERROR: Invalid parameter(s)";
+}
+
+if (!OSCAR::Utils::is_a_valid_string ($url)) {
+    warn ("[WARN] No source code associated to the package");
+}
+
+# Now we correctly set OSCAR_VERBOSE to be sure we get all the output wee want
+my $initial_verbose = $ENV{OSCAR_VERBOSE};
+if ($verbose) {
+    $ENV{OSCAR_VERBOSE} = 5;
+}
+
+if (prepare_packaging ($pkg, $output, $log_file)) {
+    die "ERROR: Impossible to get the source code ($pkg, $url)";
+}
+
+my $filename = File::Basename::basename ($url);
+
+# gv: we currently assume that we are dealing with tarballs
+my $basename = file::basename::basename($url, ".tar.gz");
+
+# As parameter, the user must specify "rpm" or "deb" to know which binary
+# package format should be used.
+my $package_type = $type;
+
 
 if (!OSCAR::Utils::is_a_valid_string ($package_type)
     || ($package_type ne "rpm" && $package_type ne "deb")) {
@@ -132,14 +154,14 @@ if (!OSCAR::Utils::is_a_valid_string ($package_type)
 
 OSCAR::Logger::oscar_log_subsection ("Creation $package_type packages...");
 
-# First we download the source tarball
-OSCAR::FileUtils::download_file ($url,
-                                 $output,
-                                 "wget",
-                                 OSCAR::Defs::NO_OVERWRITE());
-
-# Doing some clean-up
-File::Path::rmtree ("$dir");
+# If we need a source file, we download it. But remember that we may use binary
+# packages to setup the system only, therefore a source file is not mandatory.
+if (OSCAR::Utils::is_a_valid_string ($url)) {
+    OSCAR::FileUtils::download_file ($url,
+                                     $output,
+                                     "wget",
+                                     OSCAR::Defs::NO_OVERWRITE());
+}
 
 if ($package_type eq "deb") {
     build_deb_pkgs ($output, $filename, $basename);
@@ -156,3 +178,40 @@ if (defined $initial_verbose) {
 
 exit 0;
 
+__END__
+
+=head1 NAME
+
+build_package, a script that abstract the creation of binary packages (e.g.,
+RPMs or .debs). For that, the script can download the source file, prepare some
+directories for packaging, set the system for packaging, and then actually
+create the packages.
+
+=head1 SYNOPSIS
+
+build_package OPTIONS
+
+=head1 OPTIONS
+
+Recognized options include:
+
+=over 8
+
+=item --type
+
+=item --output
+
+=item --url
+
+=item --package-name
+
+=item --verbose
+
+
+=back
+
+=head1 AUTHOR
+
+Geoffroy Vallee, Oak Ridge National Laboratory <valleegr at ornl dot gov>
+
+=cut
