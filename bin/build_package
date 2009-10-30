@@ -252,7 +252,7 @@ if (OSCAR::Utils::is_a_valid_string ($url)) {
 
 # We install potential needed dependencies (based on the build.cfg file)
 my $pwd = cwd();
-if (OSCAR::Packager::prepare_prereqs ($pwd)) {
+if (OSCAR::Packager::prepare_prereqs ($pwd, $output)) {
     die "ERROR: Impossible to manage prereqs for the creation of ".
         "the binary package";
 }

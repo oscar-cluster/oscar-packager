@@ -188,8 +188,6 @@ sub split_config {
     }
     push @conf_blocks, $conf;
 
-    print "conf_blocks:\n".Dumper(@conf_blocks)."\n============\n"
-        if $ENV{OSCAR_VERBOSE};
     return @conf_blocks;
 }
 
@@ -426,10 +424,8 @@ sub build_if_needed ($$$$) {
     if (exists($conf{$sel})) {
 #         &srpm_name_ver($pdir,$conf{$sel});
 
-        print "== $sel ==\n".Dumper(%conf)."=====\n" if $verbose;
-
         for my $g (keys(%{$conf{$sel}})) {
-            if (create_binary ($g, $confp, $sel, $test, $output)) {
+            if (create_binary ($g, $confp, $sel, $test, $target)) {
                 carp "ERROR: Impossible to create the binary ".
                      "($g, $test)";
                 $err++;

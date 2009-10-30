@@ -273,7 +273,7 @@ sub create_package ($) {
             "translation)";
 
         # We check the prereqs (including dependencies with other packages)
-        if (OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c")) {
+        if (OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c", $pkg_destdir)) {
             carp "ERROR: Impossible to manage prereqs for the creation of ".
                     "the binary package";
             push (@failed_comp, $c);
