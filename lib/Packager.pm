@@ -279,8 +279,8 @@ sub prepare_rpm_env ($$$$$) {
 # between RPMs and Debs.
 #
 # Return: -1 if error, 0 else.
-sub create_binary ($$$$) {
-    my ($name, $conf, $sel, $test) = @_;
+sub create_binary ($$$$$) {
+    my ($name, $conf, $sel, $test, $output) = @_;
 
     OSCAR::Logger::oscar_log_subsection ("Packaging $name");
 
@@ -352,6 +352,12 @@ sub create_binary ($$$$) {
                     return -1;
                 } 
             }
+            $cmd = "mv $name*.rpm $output";
+            print "Executing: $cmd\n";
+            if (system ($cmd)) {
+                carp "ERROR: Impossible to execute $cmd";
+                return -1;
+            }
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
             # We copy the tarball in /usr/src/redhat/SOURCES
             my $sf = "$download_dir/$source_file";
@@ -409,7 +415,7 @@ sub create_binary ($$$$) {
 # - all binary packages resulting from build end up in the target directory
 #
 # Return: 0 if no error, else the number of errors during the build process.
-sub build_if_needed {
+sub build_if_needed ($$$$) {
     my ($confp, $pdir, $sel, $target) = @_;
     my ($march, $build_arch, $OHOME, $test, $err);
 
@@ -423,7 +429,7 @@ sub build_if_needed {
         print "== $sel ==\n".Dumper(%conf)."=====\n" if $verbose;
 
         for my $g (keys(%{$conf{$sel}})) {
-            if (create_binary ($g, $confp, $sel, $test)) {
+            if (create_binary ($g, $confp, $sel, $test, $output)) {
                 carp "ERROR: Impossible to create the binary ".
                      "($g, $test)";
                 $err++;
@@ -515,9 +521,9 @@ sub install_requires {
 # Input: pdir, where the OPKG source code is
 #        confp, an array representing the build.cfg file for the OPKG.
 # Return: 0 if success, -1 else.
-sub build_binaries ($$) {
-    my ($pdir,$confp) = @_;
-    my ($err, $bindir);
+sub build_binaries ($$$) {
+    my ($pdir, $confp, $output) = @_;
+    my $err;
 
     my @conf_blocks = split_config(@$confp);
 
@@ -531,14 +537,14 @@ sub build_binaries ($$) {
         }
 
         # check and build common-rpms if needed
-        $err = build_if_needed(\%conf, $pdir, "common", "/tmp");
+        $err = build_if_needed(\%conf, $pdir, "common", $output);
         if ($err) {
             carp "ERROR: Impossible to build the OPKG ($pdir)";
             return -1;
         }
 
         # check and build dist specific binary packages if needed
-        $err = build_if_needed(\%conf,$pdir,"dist",$bindir);
+        $err = build_if_needed(\%conf, $pdir, "dist", $output);
         if ($err) {
             carp "ERROR: Impossible to build the OPKG ($pdir)";
             return -1;
@@ -549,10 +555,15 @@ sub build_binaries ($$) {
 }
 
 
-sub package_opkg ($) {
-    my $build_file = shift;
+sub package_opkg ($$) {
+    my ($build_file, $output) = @_;
     if (! -f ($build_file)) {
         carp "ERROR: Invalid path ($build_file)";
+        return -1;
+    }
+
+    if (! -d $output) {
+        carp "ERROR: Output directory does not exist ($output)";
         return -1;
     }
 
@@ -578,7 +589,7 @@ sub package_opkg ($) {
     OSCAR::Utils::print_array (@config);
 
     # main build routine
-    my $err = build_binaries ($pdir,\@config);
+    my $err = build_binaries ($pdir, \@config, $output);
 # 
 #     # remove installed requires
 #     &remove_installed_reqs;
@@ -608,15 +619,15 @@ sub available_releases () {
 # assume there is no prereq to deal with.
 #
 # Return: -1 if error, 0 else.
-sub prepare_prereqs ($) {
-    my $dir = shift;
+sub prepare_prereqs ($$) {
+    my ($dir, $output) = @_;
 
     my $build_file = "$dir/build.cfg";
     if (! -f "$build_file") {
         OSCAR::Logger::oscar_log_subsection ("No $build_file, no prereqs");
     } else {
         OSCAR::Logger::oscar_log_subsection ("Managing prereqs ($build_file)");
-        OSCAR::Packager::package_opkg ($build_file);
+        package_opkg ($build_file, $output);
     }
 
     return 0;
