@@ -39,7 +39,7 @@ use Cwd;
 use File::Basename;
 use File::Copy;
 use File::Path;
-use Data::Dumper;
+use OSCAR::ConfigFile;
 use OSCAR::Defs;
 use OSCAR::FileUtils;
 use OSCAR::Logger;
