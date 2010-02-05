@@ -383,7 +383,7 @@ sub do_packaging ($$) {
     @failed_comp = create_package ($config_file);
     if (scalar (@failed_comp) > 0) {
         carp "Errors occured during the OSCAR packaging.\n".
-            "OSCAR components that failed are: ";
+             "OSCAR components that failed are: ";
         OSCAR::Utils::print_array (@failed_comp);
         exit 1;
     }

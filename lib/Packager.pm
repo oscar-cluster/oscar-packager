@@ -305,11 +305,11 @@ sub create_binary ($$$$$) {
         }
     }
 
-    # We go in the directory were the OPKG source code is
-    chdir "/tmp/oscar-packager/$name";
+    # We get the directory where the OPKG source code is
+    my $dir = "/tmp/oscar-packager/$name";
 
     # Is the config file for the package creation here or not?
-    my $config_file = Cwd::cwd() . "/$name.cfg";
+    my $config_file = "$dir/$name.cfg";
     if (! -f $config_file) {
         carp "ERROR: $config_file does not exist";
         return -1;
@@ -416,6 +416,7 @@ sub create_binary ($$$$$) {
 sub build_if_needed ($$$$) {
     my ($confp, $pdir, $sel, $target) = @_;
     my ($march, $build_arch, $OHOME, $test, $err);
+    $test = 0;
 
     OSCAR::Logger::oscar_log_subsection ("Building binary packages");
 
@@ -427,7 +428,7 @@ sub build_if_needed ($$$$) {
         for my $g (keys(%{$conf{$sel}})) {
             if (create_binary ($g, $confp, $sel, $test, $target)) {
                 carp "ERROR: Impossible to create the binary ".
-                     "($g, $test)";
+                     "($g, $test, $target)";
                 $err++;
             }
         }
@@ -514,8 +515,8 @@ sub install_requires {
 }
 
 
-# Input: pdir, where the OPKG source code is
-#        confp, an array representing the build.cfg file for the OPKG.
+# Input: pdir, where the source code is
+#        confp, an array representing the build.cfg file for the software to package.
 # Return: 0 if success, -1 else.
 sub build_binaries ($$$) {
     my ($pdir, $confp, $output) = @_;
@@ -535,14 +536,14 @@ sub build_binaries ($$$) {
         # check and build common-rpms if needed
         $err = build_if_needed(\%conf, $pdir, "common", $output);
         if ($err) {
-            carp "ERROR: Impossible to build the OPKG ($pdir)";
+            carp "ERROR: Impossible to build a binary ($pdir)";
             return -1;
         }
 
         # check and build dist specific binary packages if needed
         $err = build_if_needed(\%conf, $pdir, "dist", $output);
         if ($err) {
-            carp "ERROR: Impossible to build the OPKG ($pdir)";
+            carp "ERROR: Impossible to build a binary ($pdir)";
             return -1;
         }
     }
@@ -550,7 +551,7 @@ sub build_binaries ($$$) {
     return 0;
 }
 
-
+# Return: 0 if success, -1 else.
 sub package_opkg ($$) {
     my ($build_file, $output) = @_;
     if (! -f ($build_file)) {
@@ -585,7 +586,11 @@ sub package_opkg ($$) {
     OSCAR::Utils::print_array (@config);
 
     # main build routine
-    my $err = build_binaries ($pdir, \@config, $output);
+    if (build_binaries ($pdir, \@config, $output)) {
+        carp "ERROR: Impossible to build some binaries";
+        return -1;
+    }
+    
 # 
 #     # remove installed requires
 #     &remove_installed_reqs;
