@@ -628,7 +628,10 @@ sub prepare_prereqs ($$) {
         OSCAR::Logger::oscar_log_subsection ("No $build_file, no prereqs");
     } else {
         OSCAR::Logger::oscar_log_subsection ("Managing prereqs ($build_file)");
-        package_opkg ($build_file, $output);
+        if (package_opkg ($build_file, $output)) {
+            carp "ERROR: Impossible to prepare the prereqs ($dir, $output)";
+            return -1;
+        }
     }
 
     return 0;

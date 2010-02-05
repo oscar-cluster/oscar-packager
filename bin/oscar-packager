@@ -196,7 +196,7 @@ sub sanity_check () {
 #         occured.
 sub create_package ($) {
     my $config_file = shift;
-    my @failed_comp;
+    my @failed_comp = ();
 
     #
     # We do some basic testing
