@@ -277,8 +277,8 @@ sub prepare_rpm_env ($$$$$) {
 # between RPMs and Debs.
 #
 # Return: -1 if error, 0 else.
-sub create_binary ($$$$$) {
-    my ($name, $conf, $sel, $test, $output) = @_;
+sub create_binary ($$$$$$) {
+    my ($basedir, $name, $conf, $sel, $test, $output) = @_;
 
     OSCAR::Logger::oscar_log_subsection ("Packaging $name");
 
@@ -305,11 +305,8 @@ sub create_binary ($$$$$) {
         }
     }
 
-    # We get the directory where the OPKG source code is
-    my $dir = "/tmp/oscar-packager/$name";
-
     # Is the config file for the package creation here or not?
-    my $config_file = "$dir/$name.cfg";
+    my $config_file = "$basedir/$name.cfg";
     if (! -f $config_file) {
         carp "ERROR: $config_file does not exist";
         return -1;
@@ -426,7 +423,7 @@ sub build_if_needed ($$$$) {
 #         &srpm_name_ver($pdir,$conf{$sel});
 
         for my $g (keys(%{$conf{$sel}})) {
-            if (create_binary ($g, $confp, $sel, $test, $target)) {
+            if (create_binary ($pdir, $g, $confp, $sel, $test, $target)) {
                 carp "ERROR: Impossible to create the binary ".
                      "($g, $test, $target)";
                 $err++;
