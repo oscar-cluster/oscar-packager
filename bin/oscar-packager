@@ -306,7 +306,7 @@ sub create_package ($) {
             if ($file_type eq OSCAR::Defs::SVN() 
                 || $file_type eq OSCAR::Defs::TARBALL()) {
                 if (-f "$packaging_dir/$c/Makefile") {
-                    $cmd .= "make deb PKGDEST=$pkg_destdir ";
+                    $cmd .= "make deb PKGDEST=$pkg_destdir UNSIGNED_OSCAR_PKG=1";
 #                    $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
                 }
             } else {
