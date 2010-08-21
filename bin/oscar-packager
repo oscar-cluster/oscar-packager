@@ -89,6 +89,7 @@ sub create_opkgs_metapkg ($) {
     my @failed_comp;
 
     if (! -f $config_file) {
+        carp "ERROR: Impossible to access $config_file";
         return "ERROR: Impossible to access $config_file";
     }
 
@@ -96,6 +97,7 @@ sub create_opkgs_metapkg ($) {
 
     $pkg_destdir = get_pkg_dest ();
     if (!defined $pkg_destdir) {
+        carp "ERROR: Impossible to get the destination for packages";
         return "ERROR: Impossible to get the destination for packages";
     }
 
