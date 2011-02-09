@@ -362,7 +362,11 @@ sub create_binary ($$$$$$) {
                     return -1);
 
             # We try to execute rpmbuild using the spec file
-            $cmd = "rpmbuild -bb ./$name.spec";
+            my $spec_file = "./$name.spec";
+            if (! -f $spec_file) {
+                $spec_file = "./rpm/$name.spec";
+            } 
+            $cmd = "rpmbuild -bb $spec_file";
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
