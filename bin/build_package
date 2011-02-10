@@ -159,17 +159,18 @@ sub build_rpm_pkgs ($$$) {
     my $rpm_arch = `rpm --eval %{_arch}`;
     chomp ($rpm_arch);
     foreach my $spec (@spec_files) {
+        my $pkg_name =~ s/.spec//;
         $cmd = "rpmbuild -bb $spec";
         OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
         if (system ($cmd)) {
             carp "ERROR: Impossible to execute $cmd";
             return -1;
         }
-        @rpms = glob ("$rpm_dir/noarch/$pkg*.rpm");
+        @rpms = glob ("$rpm_dir/noarch/$pkg_name*.rpm");
         if (scalar (@rpms) > 0) {
             copy_files (\@rpms, $output);
         }
-        @rpms = glob ("$rpm_dir/$rpm_arch/$pkg*.rpm");
+        @rpms = glob ("$rpm_dir/$rpm_arch/$pkg_name*.rpm");
         if (scalar (@rpms) > 0) {
             copy_files (\@rpms, $output);
         }
