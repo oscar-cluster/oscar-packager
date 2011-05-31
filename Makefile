@@ -1,5 +1,4 @@
 DESTDIR=
-SOURCEDIR=/usr/src/redhat/SOURCES
 
 include ./Config.mk
 
@@ -33,7 +32,7 @@ dist: clean
 	@rm -f /tmp/oscar-packager.tar.gz
 
 rpm: dist
-	@cp oscar-packager.tar.gz $(SOURCEDIR)
+	@cp oscar-packager.tar.gz `rpm --eval '%_sourcedir'`
 	sed -e "s/PERLLIBPATH/$(SEDLIBDIR)/" < oscar-packager.spec.in \
         > oscar-packager.spec
 	rpmbuild -bb ./oscar-packager.spec
