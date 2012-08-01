@@ -16,7 +16,11 @@ FILES := core_stable_6.0.cfg core_unstable.cfg included_stable_6.0.cfg \
     core_opkgs_6.0.6.cfg core_stable_6.0.6.cfg \
     included_stable_6.0.6.cfg included_opkgs_6.0.6.cfg \
     core_opkgs_6.1.0.cfg core_stable_6.1.0.cfg \
-    included_stable_6.1.0.cfg included_opkgs_6.1.0.cfg
+    included_stable_6.1.0.cfg included_opkgs_6.1.0.cfg \
+    core_opkgs_6.1.1.cfg core_stable_6.1.1.cfg \
+    included_stable_6.1.1.cfg included_opkgs_6.1.1.cfg \
+    core_opkgs_6.1.2.cfg core_stable_6.1.2.cfg \
+    included_stable_6.1.2.cfg included_opkgs_6.1.2.cfg
     
 SUBDIRS :=
 
