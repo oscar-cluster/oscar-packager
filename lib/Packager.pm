@@ -347,7 +347,7 @@ sub create_binary ($$$$$$) {
                     return -1;
                 } 
             }
-            $cmd = "mv $name*.rpm $output";
+            $cmd = "mv *$name*.rpm $output";
             print "Executing: $cmd\n";
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";

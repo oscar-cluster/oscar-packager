@@ -1,4 +1,8 @@
-1.0 (not yet released):
+1.0.1 (not yet released):
+- Add configuration files for oscar-6.1.1 and oscar-6.1.2.
+- Various bug fixes.
+
+1.0:
 - Add configuration file for oscar-6.0, oscar-6.0.1, and oscar-6.0.2.
 - Initial release.
 - Allows the creation of binary packages for OSCAR core (stable and unstable)

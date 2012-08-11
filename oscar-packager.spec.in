@@ -7,7 +7,7 @@
 
 Summary:        OSCAR DatabAse.
 Name:           oscar-packager
-Version:        1.0
+Version:        1.0.1
 Release:        1
 Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
 Distribution:   OSCAR
@@ -26,10 +26,8 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %prep
 %setup -n %{name}
 
-%build
-make install DESTDIR=$RPM_BUILD_ROOT
-
-%install 
+%install
+%__make install DESTDIR=$RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
@@ -39,5 +37,11 @@ make install DESTDIR=$RPM_BUILD_ROOT
 /etc/oscar/%{name}/*
 
 %changelog
+* Tue May 31 2011 Olivier Lahaye <olivier.lahaye@cea.fr> 1.0.1-1
+- new upstream version (see ChangeLog for more details).
+- moved "make install" into install section to avoid RPM_BUILD_ROOT being erased
+  after install.
+- removed empty build section
+- used __make macro instead of make. makeinstall macro is useless here.
 * Fri Jan 02 2009 Geoffroy Vallee <valleegr@ornl.gov> 1.0-1
 - new upstream version (see ChangeLog for more details).
