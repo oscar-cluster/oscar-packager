@@ -18,7 +18,6 @@ clean:
 	@rm -f build-stamp configure-stamp
 	@rm -rf debian/oscar-packager
 	@rm -f oscar-packager.tar.gz
-	@rm -f oscar-packager.spec
 	for dir in ${SUBDIRS} ; do ( cd $$dir ; ${MAKE} clean ) ; done
 
 dist: clean
@@ -33,8 +32,6 @@ dist: clean
 
 rpm: dist
 	@cp oscar-packager.tar.gz `rpm --eval '%_sourcedir'`
-	sed -e "s/PERLLIBPATH/$(SEDLIBDIR)/" < oscar-packager.spec.in \
-        > oscar-packager.spec
 	rpmbuild -bb ./oscar-packager.spec
 
 deb:

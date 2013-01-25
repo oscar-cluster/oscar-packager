@@ -1,6 +1,8 @@
 1.0.1 (not yet released):
 - Add configuration files for oscar-6.1.1 and oscar-6.1.2.
+- Updated configuration files for oscar-unstable
 - Various bug fixes.
+- Fix spec file Summary.
 
 1.0:
 - Add configuration file for oscar-6.0, oscar-6.0.1, and oscar-6.0.2.
