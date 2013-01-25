@@ -354,9 +354,9 @@ sub create_binary ($$$$$$) {
                 return -1;
             }
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
-            # We copy the tarball in /usr/src/redhat/SOURCES
+            # We copy the tarball in %{_sourcedir}
             my $sf = "$download_dir/$source_file";
-            my $d = "/usr/src/redhat/SOURCES";
+            my $d = `/bin/rpm --eval %{_sourcedir}`;
             File::Copy::copy ($sf, $d) 
                 or (carp "ERROR: impossible to copy the file ($sf, $d)",
                     return -1);
