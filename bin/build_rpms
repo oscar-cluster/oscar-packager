@@ -154,6 +154,10 @@ archive_type () {
 	    ARCHIVE_SUFFIX="tar.bz2"
 	    ARCHIVE_OPT="-j"
 	    ;;
+	*.tar.xz)
+	    ARCHIVE_SUFFIX="tar.xz"
+	    ARCHIVE_OPT="-J"
+	    ;;
 	*)
 	    ;;
     esac
