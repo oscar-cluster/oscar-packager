@@ -105,9 +105,8 @@ sub build_rpm_pkgs ($$$) {
     my ($pkg, $output, $filename) = @_;
 
     # Where do we need need to copy the source file for the creation of the RPMs?
-    my $source_dir = `/bin/rpm --eval %{_topdir}`;
+    my $source_dir = `/bin/rpm --eval %{_sourcedir}`;
     chomp ($source_dir);
-    $source_dir .= "/SOURCES/";
     if (!-d $source_dir) {
         carp "ERROR: Impossible to detect where to copy source for the ".
              "RPMs ($source_dir)";
@@ -118,11 +117,13 @@ sub build_rpm_pkgs ($$$) {
     # We first copy the source file (if needed)
     #
     if (defined $filename) {
-        my $cmd = "cp $output/$filename $source_dir";
-        OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
-        if (system ($cmd)) {
-            carp "ERROR: Impossible to execute $cmd";
-            return -1;
+	if (! -f "$source_dir/$filename") {
+            my $cmd = "cp $output/$filename $source_dir";
+            OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
+            if (system ($cmd)) {
+                carp "ERROR: Impossible to execute $cmd";
+                return -1;
+            }
         }
     }
 
@@ -148,9 +149,8 @@ sub build_rpm_pkgs ($$$) {
     # create the RPM.
     #
     my $cmd;
-    my $rpm_dir = `rpm --eval %{_topdir}`;
+    my $rpm_dir = `rpm --eval %{_rpmdir}`;
     chomp ($rpm_dir);
-    $rpm_dir .= "/RPMS/";
     if (! -d $rpm_dir) {
         carp "ERROR: Impossible to figure out where the RPMs are stored";
         return -1;
@@ -188,7 +188,7 @@ sub prepare_packaging ($$$) {
     OSCAR::Logger::init_log_file ($log_file);
     OSCAR::Logger::oscar_log_section ("Creating binary package for $pkg");
 
-    my @dirs = glob ("$output/$pkg*");
+    my @dirs = glob ("$output/*$pkg*");
     my $dir;
     foreach my $d (@dirs) {
         if (-d $d) {

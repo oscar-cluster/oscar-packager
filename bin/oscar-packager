@@ -309,7 +309,7 @@ sub create_package ($) {
                 || $file_type eq OSCAR::Defs::TARBALL()) {
                 if (-f "$packaging_dir/$c/Makefile") {
                     $cmd .= "make deb PKGDEST=$pkg_destdir UNSIGNED_OSCAR_PKG=1";
-#                    $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+                    $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
                 }
             } else {
                 oscar_log_subsection ("ERROR: Unknown type ($file_type)");
@@ -319,17 +319,11 @@ sub create_package ($) {
             if ($file_type eq OSCAR::Defs::SVN()
                 || $file_type eq OSCAR::Defs::TARBALL()) {
                 if (-f "$packaging_dir/$c/Makefile") {
-                    $cmd .= "make rpm PKGDEST=$pkg_destdir ";
-                    # On some fedora core releases, we cannot use 
-                    # /usr/src/redhat
-                    if (($os->{compat_distro} eq "fc") 
-                        && ($os->{compat_distrover} >= 10)) {
-                        $cmd .= " SOURCEDIR=~/rpmbuild/SOURCES ";
-                    }
-                    if ($os->{distro} eq "suse") {
-                        $cmd .= " SOURCEDIR=/usr/src/packages/SOURCES ";
-                    }
-#                    $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+                    $cmd .= "make rpm PKGDEST=$pkg_destdir";
+                    # Get the sourcedir (varies on distro)
+                    my $src_dir=`rpm --eval '%{_sourcedir}'`;
+                    $cmd .= " SOURCEDIR=".$src_dir;
+                    $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
                 }
             } elsif ($file_type eq OSCAR::Defs::SRPM()) {
                 $cmd .= "rpmbuild --rebuild $filename";
