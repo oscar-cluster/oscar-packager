@@ -31,6 +31,9 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 
 %changelog
 * Wed Nov 14 2012 Olivier Lahaye <olivier.lahaye@cea.fr> 1.0.1-2
+- moved "make install" into install section to avoid RPM_BUILD_ROOT being erased
+  after install.
+- removed empty build section
 - used __make macro instead of make. makeinstall macro is useless here.
 - used macros for paths.
 
