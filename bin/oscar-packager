@@ -356,6 +356,18 @@ sub help_and_exit {
     exit 0;
 }
 
+sub parse_config($$){
+    my ($config_file, $key) = @_;
+    #
+    # We parse the config file with the given key.
+    #
+    OSCAR::Logger::oscar_log_subsection "Parsing $config_file...";
+    my %cpts = OSCAR::ConfigFile::get_list_values ($config_file, $key);
+    OSCAR::Utils::print_array (keys %cpts) if $verbose;
+
+    return \%cpts;
+}
+
 sub do_packaging ($$) {
     my ($config_file, $opkg_conffile) = @_;
     my @failed_comp = ();
@@ -372,22 +384,16 @@ sub do_packaging ($$) {
         return "ERROR: Impossible to access $config_file";
     }
 
-    #
-    # We parse the config file with source.
-    #
-    OSCAR::Logger::oscar_log_subsection "Parsing $config_file...";
-    my %cpts = OSCAR::ConfigFile::get_list_values ($config_file, "source");
-    OSCAR::Utils::print_array (keys %cpts) if $verbose;
+    # Get the list of packages by parsing the package config file with "source"
+    my $cpts =  parse_config($config_file, "source");
 
-    #
-    # We parse the config file with precommand.
-    #
-    OSCAR::Logger::oscar_log_subsection "Parsing $config_file...";
-    my %precmds = OSCAR::ConfigFile::get_list_values ($config_file, "precommand");
-    OSCAR::Utils::print_array (keys %precmds) if $verbose;
+    # Get the list of packages by parsing the package config file with "precommand"
+    my $precmds =  parse_config($config_file, "precommand");
 
+    # Get the list of opkgs by parsing the package config file with "source"
+    my $ocpts =  parse_config($opkg_conffile, "source");
 
-    @failed_comp = create_package (\%cpts, \%precmds);
+    @failed_comp = create_package ($cpts, $precmds);
     if (scalar (@failed_comp) > 0) {
         carp "Errors occured during the OSCAR packaging.\n".
              "OSCAR components that failed are: ";
@@ -397,7 +403,7 @@ sub do_packaging ($$) {
 
     # We now create the meta-package for all core OPKGs.
     if (-f $opkg_conffile) {
-        @failed_comp = create_opkgs_metapkg (\%cpts);
+        @failed_comp = create_opkgs_metapkg ($ocpts);
         if (scalar (@failed_comp) > 0) {
             carp "Errors occured during the creation of meta-packages for ".
                 "available OPKGs";
