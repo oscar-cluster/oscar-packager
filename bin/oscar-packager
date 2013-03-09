@@ -472,6 +472,7 @@ my $opkg_conffile; # This variable points to the associated OPKGs.
 
 # We create a log file specific to oscar-packager
 my $log_file = "/var/log/oscar/oscar-packager.log";
+OSCAR::Logger::init_log_file ($log_file);
 
 # Now we correctly set OSCAR_VERBOSE to be sure we get all the output we want
 my $initial_verbose = $ENV{OSCAR_VERBOSE};
