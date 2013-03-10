@@ -1,4 +1,8 @@
-1.0.1 (not yet released):
+1.1.0 (not yet released):
+- Add the possibility to build only onee specific package [dikim]
+  e.g. "oscar-packager --included openmpi unstable" will only build opnempi.
+
+1.0.1:
 - Add configuration files for oscar-6.1.1 and oscar-6.1.2.
 - Updated configuration files for oscar-unstable
 - Various bug fixes.
