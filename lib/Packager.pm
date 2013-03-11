@@ -308,8 +308,24 @@ sub create_binary ($$$$$$) {
     # Is the config file for the package creation here or not?
     my $config_file = "$basedir/$name.cfg";
     if (! -f $config_file) {
-        carp "ERROR: $config_file does not exist";
-        return -1;
+        if($os->{pkg} eq "rpm"){
+            # If the config file does not exist, we do not want to quit the program
+            # but just proceed the build process with the given spec file.
+            my $spec_file = "./$name.spec";
+            if (! -f $spec_file) {
+                $spec_file = "./rpm/$name.spec";
+            } 
+            my $cmd = "rpmbuild -bb $spec_file";
+            if (system ($cmd)) {
+                carp "ERROR: Impossible to execute $cmd";
+                return -1;
+            }
+            return 0;
+        }
+        if($os->{pkg} eq "deb"){
+            carp "ERROR: There is no corresponding config file: $config_file";
+            return -1;
+        }
     }
 
     # Now, since we can access the config file, we parse it and download the
@@ -318,7 +334,8 @@ sub create_binary ($$$$$$) {
     my $source_data = OSCAR::ConfigFile::get_value ("$config_file",
                                                     undef,
                                                     "source");
-    my ($method, $source) = split (",", $source_data);
+    
+    my ($method, $source) = split (",", $source_data, 2);
     if (OSCAR::FileUtils::download_file ($source,
                                          $download_dir,
                                          $method,
@@ -328,8 +345,12 @@ sub create_binary ($$$$$$) {
     }
 
     my $source_file = File::Basename::basename ($source);
+    my $tmp_file = $source_file;
+    $tmp_file =~ s/[\{\}]//g;
+    my @src_files = split(",", $tmp_file);
+    my $src_file = $src_files[0];
     my $source_type = 
-        OSCAR::FileUtils::file_type ("$download_dir/$source_file");
+        OSCAR::FileUtils::file_type ("$download_dir/$src_file");
     if (!defined $source_type) {
         carp "ERROR: Impossible to detect the source file format";
         return -1;
@@ -355,11 +376,14 @@ sub create_binary ($$$$$$) {
             }
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
             # We copy the tarball in %{_sourcedir}
-            my $sf = "$download_dir/$source_file";
             my $d = `/bin/rpm --eval %{_sourcedir}`;
-            File::Copy::copy ($sf, $d) 
-                or (carp "ERROR: impossible to copy the file ($sf, $d)",
-                    return -1);
+            chomp($d);
+            foreach my $sf (@src_files){
+                $sf = "$download_dir/$sf";
+                File::Copy::copy ($sf, $d) 
+                    or (carp "ERROR: impossible to copy the file ($sf, $d)",
+                        return -1);
+            }
 
             # We try to execute rpmbuild using the spec file
             my $spec_file = "./$name.spec";
@@ -591,7 +615,7 @@ sub package_opkg ($$) {
         carp "ERROR: Impossible to build some binaries";
         return -1;
     }
-    
+
 # 
 #     # remove installed requires
 #     &remove_installed_reqs;
@@ -624,6 +648,32 @@ sub available_releases () {
 sub prepare_prereqs ($$) {
     my ($dir, $output) = @_;
 
+    my $os = OSCAR::OCA::OS_Detect::open();
+    if (!defined $os) {
+        carp "ERROR: Impossible to detect the binary package format";
+        return -1;
+    }
+
+    my $cmd = "";
+    my $run_script = "";
+    if ($os->{pkg} eq "rpm") {
+	$run_script = "$dir/build_rpm.sh";
+        #$cmd = "mv $dir/*.rpm $output";
+    } elsif ($os->{pkg} eq "deb") {
+	$run_script = "$dir/build_deb.sh";
+    } else {
+        carp "ERROR: $os->{pkg} is not currently supported";
+        return -1;
+    }
+
+    if( -f $run_script ){
+        print "Executing: $run_script\n";
+        if (system ($run_script)) {
+            carp "ERROR: Impossible to execute $cmd";
+            return -1;
+        }
+    }
+    
     my $build_file = "$dir/build.cfg";
     if (! -f "$build_file") {
         OSCAR::Logger::oscar_log_subsection ("No $build_file, no prereqs");
