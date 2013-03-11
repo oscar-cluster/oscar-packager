@@ -106,7 +106,7 @@ sub create_opkgs_metapkg ($) {
     my $cmd;
     foreach my $c (keys %$cpts) {
 
-        if($opkgs){
+        if( not ($opkgs =~ m/opkgs/ or $opkgs =~ m/stable/) ){
            next if ($opkgs ne $c);
         }
 
@@ -224,7 +224,7 @@ sub create_package ($$) {
     my $filename;
     foreach my $c (keys %$cpts) {
 
-        if($opkgs){
+        if( not ($opkgs =~ m/opkgs/ or $opkgs =~ m/stable/) ){
            next if ($opkgs ne $c);
         }
 
