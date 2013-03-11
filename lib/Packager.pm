@@ -53,6 +53,7 @@ use OSCAR::Utils;
             );
 
 my $verbose = 1;
+our $packaging_dir = "/tmp/oscar-packager";
 
 ############################################################################
 # Read in package_build config file.
@@ -273,6 +274,23 @@ sub prepare_rpm_env ($$$$$) {
     return $opt;
 }
 
+# This is a helper subroutine to move the built rpm files to the 
+# given output directory
+#
+# Return: -1 if error, 0 else.
+sub move_binaryfiles($$) {
+    my ($name, $output) = @_;
+    chomp(my $src_dir = `/bin/rpm --eval %{_rpmdir}`);
+    
+    my $cmd = "mv $src_dir/*/*$name*.rpm $output";
+    print "Executing: $cmd\n";
+    if (system ($cmd)) {
+	carp "ERROR: Impossible to execute $cmd";
+	return -1;
+    }
+    return 0;
+}
+
 # This routine effectively create binary packages, hiding the differences 
 # between RPMs and Debs.
 #
@@ -309,17 +327,19 @@ sub create_binary ($$$$$$) {
     my $config_file = "$basedir/$name.cfg";
     if (! -f $config_file) {
         if($os->{pkg} eq "rpm"){
+            # In the rpm-based system,
             # If the config file does not exist, we do not want to quit the program
             # but just proceed the build process with the given spec file.
-            my $spec_file = "./$name.spec";
+            my $spec_file = "$packaging_dir/$name.spec";
             if (! -f $spec_file) {
-                $spec_file = "./rpm/$name.spec";
+                $spec_file = "$packaging_dir/rpm/$name.spec";
             } 
             my $cmd = "rpmbuild -bb $spec_file";
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
             }
+            move_binaryfiles($name, $output);
             return 0;
         }
         if($os->{pkg} eq "deb"){
@@ -386,6 +406,7 @@ sub create_binary ($$$$$$) {
             }
 
             # We try to execute rpmbuild using the spec file
+            chdir($packaging_dir);
             my $spec_file = "./$name.spec";
             if (! -f $spec_file) {
                 $spec_file = "./rpm/$name.spec";
@@ -395,6 +416,7 @@ sub create_binary ($$$$$$) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
             }
+            move_binaryfiles($name, $output);
         } else {
             carp "ERROR: Unsupported file type for binary package creation ".
                  "($source_type)";
@@ -647,6 +669,8 @@ sub available_releases () {
 # Return: -1 if error, 0 else.
 sub prepare_prereqs ($$) {
     my ($dir, $output) = @_;
+
+    $packaging_dir = $dir;
 
     my $os = OSCAR::OCA::OS_Detect::open();
     if (!defined $os) {
