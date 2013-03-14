@@ -421,12 +421,10 @@ sub create_binary ($$$$$$) {
             }
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
             # We copy the tarball in %{_sourcedir}
-            my $d = $src_dir
-            chomp($d);
             foreach my $sf (@src_files){
                 $sf = "$download_dir/$sf";
-                File::Copy::copy ($sf, $d) 
-                    or (carp "ERROR: impossible to copy the file ($sf, $d)",
+                File::Copy::copy ($sf, $src_dir) 
+                    or (carp "ERROR: impossible to copy the file ($sf, $src_dir)",
                         return -1);
             }
 
