@@ -29,10 +29,9 @@ use File::Path;
 use Carp;
 use warnings "all";
 
-my ($all, $core, $included, $opkgs, $verbose, $debug, $available_releases, $unsigned);
+my ($all, $core, $included, $force, $opkgs, $verbose, $debug, $available_releases, $unsigned);
 
 $opkgs = 1;
-our $packaging_dir = "/tmp/oscar-packager";
 use vars qw ($pkg_destdir);
 
 # Getopt::Long::Configure("pass_through");
@@ -40,6 +39,7 @@ GetOptions(
         "all=s"                             => \$all,
         "core=s"                            => \$core,
         "included=s"                        => \$included,
+        "force"                             => \$force,
         "supported-releases"                => \$available_releases,
         "unsigned-packages"                 => \$unsigned,
         "verbose"                           => \$verbose,
@@ -49,7 +49,10 @@ GetOptions(
         ) || help_and_die();
 
 # Global variables
+our $packaging_dir = "/tmp/oscar-packager";
 my $config_file_path = "/etc/oscar/oscar-packager";
+my $built_pkgs = "$config_file_path/.oscar_pkgs";
+my %already_built = ();
 
 sub pkgdir_cleanup () {
     if (-d $packaging_dir) {
@@ -89,6 +92,25 @@ sub get_pkg_dest () {
     return $destdir;
 }
 
+# Read the .oscar_pkgs file and save the list of alredy built packages to 
+# the global hash %already_built.
+sub read_built_pkgs_file(){
+    system("touch $built_pkgs") if( ! -e $built_pkgs);
+
+    open PKGS, "<$built_pkgs";
+    while(my $line = <PKGS>){
+        chomp($line);
+        my ($cat, $po, $pkg, $time) = split(":", $line, 4);
+        $pkg = trim($pkg);
+        $already_built{"$cat:$po:$pkg"} = $time;
+    }
+}
+
+# Predicate to check to see if a package is already built or not
+sub is_built($$){
+    my ($pkg, $cat) = @_;
+    return exists $already_built{"$cat:$pkg"};
+}
 
 sub create_opkgs_metapkg ($) {
     my $cpts = shift;
@@ -107,9 +129,20 @@ sub create_opkgs_metapkg ($) {
     my $cmd;
     foreach my $c (keys %$cpts) {
 
-        if( not ($opkgs =~ m/opkgs/ or $opkgs =~ m/stable/) ){
-           next if ($opkgs ne $c);
+        # oscar-packager takes opkgs, stable, unstable, and a package name as
+        # a parameter of --all or --included.
+        my ($current_opkg, $category) = split(":", $opkgs, 2);
+        $category .= ":opkg";
+        if( not ($current_opkg =~ m/current_opkg/ or $current_opkg =~ m/stable/) ){
+           next if ($current_opkg ne $c);
         }
+        # Check to see if the package is already built or not
+        # If not, go ahead. Otherwise, move on to the next
+        elsif(is_built($c, $category) and !$force){
+	    OSCAR::Logger::oscar_log_subsection "The package ($c) is already built.";
+            next;
+        }
+
 
         OSCAR::Logger::oscar_log_subsection "Packaging $c...";
         my $source = $$cpts{$c};
@@ -147,6 +180,17 @@ sub create_opkgs_metapkg ($) {
             OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
                 "build opkg-$c ($cmd)";
             push (@failed_comp, "opkg-$c");
+        }else{
+            my $timestamp = localtime;
+            my $str = "$category:$c";
+            if($force or is_built($c, "$category")){
+                system("sed -i \"/$str/d\" $built_pkgs");
+            }
+
+            open PKG, ">>$built_pkgs";
+            $str .= (" " x (50 - length($str)));
+            print PKG "$str:$timestamp\n";
+            close PKG;
         }
         # once the opkg is built, remove its source tarball.
         system("rm -f $pkg_destdir/opkg-$c-*.tar.gz");
@@ -227,9 +271,20 @@ sub create_package ($$) {
     my $filename;
     foreach my $c (keys %$cpts) {
 
-        if( not ($opkgs =~ m/opkgs/ or $opkgs =~ m/stable/) ){
-           next if ($opkgs ne $c);
+        # oscar-packager takes opkgs, stable, unstable, and a package name as
+        # a parameter of --all or --included.
+        my ($current_opkg, $category) = split(":", $opkgs, 2);
+        $category .= ":package";
+        if( not ($current_opkg =~ m/current_opkg/ or $current_opkg =~ m/stable/) ){
+           next if ($current_opkg ne $c);
         }
+        # Check to see if the package is already built or not
+        # If not, go ahead. Otherwise, move on to the next
+        elsif(is_built($c, $category) and !$force){
+	    OSCAR::Logger::oscar_log_subsection "The package ($c) is already built.";
+            next;
+        }
+
 
         OSCAR::Logger::oscar_log_subsection "Packaging $c...";
         my $source = $$cpts{$c};
@@ -330,6 +385,17 @@ sub create_package ($$) {
             OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
                 "build $c ($cmd)";
             push (@failed_comp, $c);
+        }else{
+            my $timestamp = localtime;
+            my $str = "$category:$c";
+            if($force or is_built($c, $category)){
+                system("sed -i \"/$str/d\" $built_pkgs");
+            }
+
+            open PKG, ">>$built_pkgs";
+            $str .= (" " x (50 - length($str)));
+            print PKG "$str:$timestamp\n";
+            close PKG;
         }
     }
 
@@ -429,7 +495,7 @@ sub package_core ($$$) {
     if (!defined $core) {
         return @failed_comp;
     }
-    $opkgs = $core;
+    $opkgs = "$core:core";
 
     if ($core && OSCAR::Utils::is_element_in_array($core, @$releases) ) {
         $config_file = "$conffilepath/core_stable_$core.cfg";
@@ -456,7 +522,7 @@ sub package_included ($$$) {
     if (!defined $included) {
         return @failed_comp;
     }
-    $opkgs = $included;
+    $opkgs = "$included:included";
 
     if ($included && OSCAR::Utils::is_element_in_array($included, @$releases)) {
         $config_file = "$conffilepath/included_stable_$included.cfg";
@@ -511,6 +577,9 @@ if ($available_releases) {
     OSCAR::Utils::print_array (@releases);
     exit (0)
 }
+
+# Read the .oscar_pkg file
+read_built_pkgs_file();
 
 OSCAR::Logger::oscar_log_section ("OSCAR Packager Starting...");
 
@@ -589,6 +658,18 @@ Fall back to the verbose mode of execution for debugging purpose.
 Display even more output than when using the verbose option.
 
 =back
+
+=head1 EXAMPLES
+
+=item oscar-packager --all stable_6.1.2
+Build all the packages and opkgs in the stable_6.1.2 category. If the packages have already been built, they would not be re-built unless the "--force" option is applied.
+
+=item oscar-packager --all modules-oscar
+Build only the package with the name "modules-oscar". This is the same as "oscar-packager --all modules-oscar --force".
+Since specifying a package name means that you really want to build that one, it does not matter whether it has --force option or not.
+
+=item oscar-packager --included unstable --force
+Build all the included packages and opkgs in the unstable category no matther whether they have already been built or not.
 
 =head1 AUTHOR
 
