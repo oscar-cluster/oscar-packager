@@ -347,6 +347,8 @@ sub create_binary ($$$$$$) {
             return -1;
         }
     }
+    # SOURCES dir for rpm
+    chomp(my $src_dir = `/bin/rpm --eval %{_rpmdir}`);
 
     # Run any precommand defind in a package's config file.
     OSCAR::Logger::oscar_log_subsection "Running the preconfiured commands for $name...";
@@ -355,6 +357,8 @@ sub create_binary ($$$$$$) {
                                                  "precommand");
     if($pre_cmd){
         $pre_cmd =~ s/BASE_DIR/$basedir/g;
+        $pre_cmd =~ s/PKG_NAME/$name/g;
+        $pre_cmd =~ s/SRC_DIR/$src_dir/g;
         if (system($pre_cmd)) {
              carp "ERROR: Impossible to execute $pre_cmd";
              return -1;
@@ -417,7 +421,7 @@ sub create_binary ($$$$$$) {
             }
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
             # We copy the tarball in %{_sourcedir}
-            my $d = `/bin/rpm --eval %{_sourcedir}`;
+            my $d = $src_dir
             chomp($d);
             foreach my $sf (@src_files){
                 $sf = "$download_dir/$sf";
