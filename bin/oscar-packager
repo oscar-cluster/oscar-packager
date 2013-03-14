@@ -31,6 +31,7 @@ use warnings "all";
 
 my ($all, $core, $included, $opkgs, $verbose, $debug, $available_releases, $unsigned);
 
+$opkgs = 1;
 our $packaging_dir = "/tmp/oscar-packager";
 use vars qw ($pkg_destdir);
 
@@ -147,6 +148,8 @@ sub create_opkgs_metapkg ($) {
                 "build opkg-$c ($cmd)";
             push (@failed_comp, "opkg-$c");
         }
+        # once the opkg is built, remove its source tarball.
+        system("rm -f $pkg_destdir/opkg-$c-*.tar.gz");
     }
 
     $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
