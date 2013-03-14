@@ -348,6 +348,19 @@ sub create_binary ($$$$$$) {
         }
     }
 
+    # Run any precommand defind in a package's config file.
+    OSCAR::Logger::oscar_log_subsection "Running the preconfiured commands for $name...";
+    my $pre_cmd = OSCAR::ConfigFile::get_value ("$config_file",
+                                                 undef,
+                                                 "precommand");
+    if($pre_cmd){
+        $pre_cmd =~ s/BASE_DIR/$basedir/g;
+        if (system($pre_cmd)) {
+             carp "ERROR: Impossible to execute $pre_cmd";
+             return -1;
+        }
+    }
+
     # Now, since we can access the config file, we parse it and download the
     # needed source files.
     OSCAR::Logger::oscar_log_subsection "Downloading sources for $name...";
@@ -355,30 +368,38 @@ sub create_binary ($$$$$$) {
                                                     undef,
                                                     "source");
     
-    my ($method, $source) = split (",", $source_data, 2);
-    if (OSCAR::FileUtils::download_file ($source,
-                                         $download_dir,
-                                         $method,
-                                         OSCAR::Defs::NO_OVERWRITE())) {
-        carp "ERROR: Impossible to download the source file ($source)";
-        return -1
-    }
-
-    my $source_file = File::Basename::basename ($source);
-    my $tmp_file = $source_file;
-    $tmp_file =~ s/[\{\}]//g;
-    my @src_files = split(",", $tmp_file);
-    my $src_file = $src_files[0];
-    my $source_type = 
-        OSCAR::FileUtils::file_type ("$download_dir/$src_file");
-    if (!defined $source_type) {
-        carp "ERROR: Impossible to detect the source file format";
-        return -1;
+    my $source_type = "";
+    my $source_file = "";
+    my @src_files = ();
+    if($source_data){
+        my ($method, $source) = split (",", $source_data, 2);
+        if (OSCAR::FileUtils::download_file ($source,
+                                             $download_dir,
+                                             $method,
+                                             OSCAR::Defs::NO_OVERWRITE())) {
+            carp "ERROR: Impossible to download the source file ($source)";
+            return -1
+        }
+ 
+        $source_file = File::Basename::basename ($source);
+        my $tmp_file = $source_file;
+        $tmp_file =~ s/[\{\}]//g;
+        @src_files = split(",", $tmp_file);
+        my $src_file = $src_files[0];
+        $source_type = 
+            OSCAR::FileUtils::file_type ("$download_dir/$src_file");
+        if (!defined $source_type) {
+            carp "ERROR: Impossible to detect the source file format";
+            return -1;
+        }
+    }else{
+        $source_type = OSCAR::Defs::TARBALL();
     }
 
     my $cmd;
     if ($os->{pkg} eq "rpm") {
         if ($source_type eq OSCAR::Defs::SRPM()) {
+            # prepare to get the build option for rpm.
             my $s = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
             $cmd = "$binaries_path/build_rpms --only-rpm $download_dir/$source_file $s";
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
