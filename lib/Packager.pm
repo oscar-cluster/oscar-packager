@@ -348,7 +348,7 @@ sub create_binary ($$$$$$) {
         }
     }
     # SOURCES dir for rpm
-    chomp(my $src_dir = `/bin/rpm --eval %{_rpmdir}`);
+    chomp(my $src_dir = `/bin/rpm --eval %{_sourcedir}`);
 
     # Run any precommand defind in a package's config file.
     OSCAR::Logger::oscar_log_subsection "Running the preconfiured commands for $name...";
