@@ -15,8 +15,8 @@ uninstall:
 
 clean:
 	@rm -f *~
-	@rm -f build-stamp configure-stamp
-	@rm -rf debian/oscar-packager
+	@rm -f build-stamp configure-stamp debian/files
+	@rm -rf debian/oscar-packager*
 	@rm -f oscar-packager.tar.gz
 	for dir in ${SUBDIRS} ; do ( cd $$dir ; ${MAKE} clean ) ; done
 
