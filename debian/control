@@ -1,0 +1,12 @@
+Source: oscar-packager
+Maintainer: Olivier Lahaye <olivier.lahaye@cea.fr>
+Section: misc
+Priority: optional
+Standards-Version: 1.1.0
+Build-Depends: debhelper (>=8)
+
+Package: oscar-packager
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depend}, rapt, wget, subversion, oscar-base-libs, libappconfig-perl, fakeroot, dpkg-dev, debhelper, build-essential
+Description: OSCAR Packaging helpers.
+ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
