@@ -545,10 +545,6 @@ my $config_file; # This variable points to the config file for the components
                  # we try to package.
 my $opkg_conffile; # This variable points to the associated OPKGs.
 
-# We create a log file specific to oscar-packager
-my $log_file = "/var/log/oscar/oscar-packager.log";
-OSCAR::Logger::init_log_file ($log_file);
-
 # Now we correctly set OSCAR_VERBOSE to be sure we get all the output we want
 my $initial_verbose = $ENV{OSCAR_VERBOSE};
 if ($verbose) {
@@ -559,6 +555,10 @@ if ($debug) {
 }
 
 $ENV{UNSIGNED_OSCAR_PKG} =1 if ($unsigned);
+
+# We create a log file specific to oscar-packager
+my $log_file = "/var/log/oscar/oscar-packager.log";
+OSCAR::Logger::init_log_file ($log_file);
 
 if (sanity_check ()) {
     die "ERROR: System configuration not compliant with oscar-packager.";
