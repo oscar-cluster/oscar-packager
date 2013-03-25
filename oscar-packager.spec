@@ -1,7 +1,7 @@
 Summary:        OSCAR Packaging helpers.
 Name:           oscar-packager
 Version:        1.1.0
-Release:        0.2
+Release:        0.3
 Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
 Distribution:   OSCAR
 Packager:       Olivier Lahaye <olivier.lahaye@cea.fr>
@@ -30,10 +30,15 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Mon Mar 25 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.21
+- Upgraded c3 to 5.1.3 (new version) in core_unstable.cfg
+
 * Thu Mar 14 2013 DongInn Kim <dikim@cs.indiana.edu> 1.1.0-0.2
 - More intelligent building process for the oscar packages and opkgs.
+
 * Sun Mar 10 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.1
 - New upstream beta version
+
 * Wed Nov 14 2012 Olivier Lahaye <olivier.lahaye@cea.fr> 1.0.1-2
 - used __make macro instead of make. makeinstall macro is useless here.
 - used macros for paths.

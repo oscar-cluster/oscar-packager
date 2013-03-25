@@ -1,5 +1,6 @@
 1.1.0 (not yet released):
-- Add the possibility to build only onee specific package [dikim]
+- Upgraded c3 to 5.1.3 (new version) [ol]
+- Add the possibility to build only one specific package [dikim]
   e.g. "oscar-packager --included openmpi unstable" will only build opnempi.
 
 1.0.1:
