@@ -64,6 +64,8 @@ sub build_deb_pkgs ($$$) {
         carp "ERROR: Impossible to execute $cmd";
         return -1;
     }
+	# OL: At this point, we have the deb package in $output (current directory) and a
+	# non cleaned build tree for the package. We should do some cleanup.
 
     return 0;
 }
@@ -111,20 +113,6 @@ sub build_rpm_pkgs ($$$) {
         carp "ERROR: Impossible to detect where to copy source for the ".
              "RPMs ($source_dir)";
         return -1;
-    }
-
-    #
-    # We first copy the source file (if needed)
-    #
-    if (defined $filename) {
-	if (! -f "$source_dir/$filename") {
-            my $cmd = "cp $output/$filename $source_dir";
-            OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
-            if (system ($cmd)) {
-                carp "ERROR: Impossible to execute $cmd";
-                return -1;
-            }
-        }
     }
 
     #
@@ -239,8 +227,13 @@ OSCAR::Logger::oscar_log_subsection ("Creation $package_type packages...");
 # If we need a source file, we download it. But remember that we may use binary
 # packages to setup the system only, therefore a source file is not mandatory.
 if (OSCAR::Utils::is_a_valid_string ($url)) {
+	my $dest = $output;
+	# OL: Avoid downloading the source in $output were result are copied into.
+	# This avoid having tarballs lay into $output (repository).
+	# For debian, we keep the old behaviour.
+	$dest = `/bin/rpm --eval %{_sourcedir}` if ($package_type eq "rpm");
     OSCAR::FileUtils::download_file ($url,
-                                     $output,
+                                     $dest,
                                      "wget",
                                      OSCAR::Defs::NO_OVERWRITE());
 }
