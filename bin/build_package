@@ -138,6 +138,14 @@ sub build_rpm_pkgs ($$$) {
     #
     my $cmd;
     my @rpms;
+	my $rpmdir = `rpm --eval '%_rpmdir'`; # required as it is not initialised when parsing a spec file.
+	chomp($rpmdir);
+	my $query_spec_cmd = "rpmspec -q";
+
+	# rpmspec is the replacement of rpm -q --specfile. Fallback to old method
+	# if rpmspec not yet available.
+	$query_spec_cmd = "rpm -q --specfile " if ( ! -x '/usr/bin/rpmspec') ;
+
     foreach my $spec (@spec_files) {
         $cmd = "rpmbuild -bb $spec";
         OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
@@ -147,7 +155,7 @@ sub build_rpm_pkgs ($$$) {
         }
 		# Copy resulting rpms to $output.
 		OSCAR::Logger::oscar_log_subsection ("Copying Resulting RPMS to $output");
-		@rpms = `rpm -q --specfile $spec --qf '%{_rpmdir}/%{arch}/%{name}-%{version}-%{release}.%{arch}.rpm '`;
+		@rpms = `$query_spec_cmd $spec --qf "$rpmdir/%{arch}/%{name}-%{version}-%{release}.%{arch}.rpm "`;
         if (scalar (@rpms) > 0) {
             copy_files (\@rpms, $output);
         }
@@ -232,6 +240,7 @@ if (OSCAR::Utils::is_a_valid_string ($url)) {
 	# This avoid having tarballs lay into $output (repository).
 	# For debian, we keep the old behaviour.
 	$dest = `/bin/rpm --eval %{_sourcedir}` if ($package_type eq "rpm");
+	chomp($dest);
     OSCAR::FileUtils::download_file ($url,
                                      $dest,
                                      "wget",
