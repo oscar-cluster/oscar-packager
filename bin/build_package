@@ -118,7 +118,7 @@ sub build_rpm_pkgs ($$$) {
     #
     # Do we have any patches to use?
     #
-    my @patch_files = glob ("rpm/*.patch");
+    my @patch_files = glob ("rpm/$pkg/*");
     OSCAR::Logger::oscar_log_subsection ("Copying the following patch files: "
         .join (",", @patch_files));
     if (scalar(@patch_files) > 0) {
@@ -128,7 +128,7 @@ sub build_rpm_pkgs ($$$) {
     #
     # Then we find the spec file.
     #
-    my @spec_files = glob ("rpm/*.spec");
+    my @spec_files = glob ("rpm/$pkg*.spec");
     OSCAR::Logger::oscar_log_subsection ("Found the following spec files: "
         .join (",", @spec_files));
 
