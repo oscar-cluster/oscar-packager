@@ -279,15 +279,28 @@ sub prepare_rpm_env ($$$$$) {
 #
 # Return: -1 if error, 0 else.
 sub move_binaryfiles($$) {
-    my ($name, $output) = @_;
-    chomp(my $src_dir = `/bin/rpm --eval %{_rpmdir}`);
-    
-    my $cmd = "mv $src_dir/*/*$name*.rpm $output";
-    print "Executing: $cmd\n";
-    if (system ($cmd)) {
-	carp "ERROR: Impossible to execute $cmd";
-	return -1;
-    }
+    my ($spec, $output) = @_;
+	my @rpms;
+    chomp(my $rpmdir = `rpm --eval %{_rpmdir}`);
+	my $query_spec_cmd = "rpmspec -q";
+
+	# rpmspec is the replacement of rpm -q --specfile. Fallback to old method
+	# if rpmspec not yet available.
+	$query_spec_cmd = "rpm -q --specfile " if ( ! -x '/usr/bin/rpmspec') ;
+	# Warning, do not move the %{arch} out of the rpmspec query (e.g. in the above rpmdir computation
+	# Otherwize it will evalutate to the host binary architecture while here, it'll evaluate to the
+	# BuildArch in the spec file (if not specified it is host binary arche, but it can be noarch)
+	@rpms = `$query_spec_cmd $spec --qf "$rpmdir/%{arch}/%{name}-%{version}-%{release}.%{arch}.rpm "`;
+	my $cmd;
+    foreach my $rpm (@rpms) {
+		$cmd = "mv -f $rpm $output";
+		print "Moving " . File::Basename::basename ($rpm) . " to " . $output . "\n";
+		OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
+		if (system ($cmd)) {
+			carp "ERROR: Impossible to execute $cmd";
+			return -1;
+		}
+	}
     return 0;
 }
 
@@ -339,7 +352,7 @@ sub create_binary ($$$$$$) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
             }
-            move_binaryfiles($name, $output);
+            move_binaryfiles($spec_file, $output);
             return 0;
         }
         if($os->{pkg} eq "deb"){
@@ -439,7 +452,7 @@ sub create_binary ($$$$$$) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
             }
-            move_binaryfiles($name, $output);
+            move_binaryfiles($spec_file, $output);
         } else {
             carp "ERROR: Unsupported file type for binary package creation ".
                  "($source_type)";
