@@ -398,11 +398,16 @@ sub create_binary ($$$$$$) {
             return -1
         }
  
-        $source_file = File::Basename::basename ($source);
-        my $tmp_file = $source_file;
-        $tmp_file =~ s/[\{\}]//g;
-        @src_files = split(",", $tmp_file);
-        my $src_file = $src_files[0];
+        # $source_file = File::Basename::basename ($source);
+        # my $tmp_file = $source_file;
+        # $tmp_file =~ s/[\{\}]//g;
+        # @src_files = split(",", $tmp_file);
+        # my $src_file = $src_files[0];
+
+		@src_files = glob($source);
+		# We assume that the main archive is the 1st source file.
+		my src_file = File::Basename::basename ($src_files[0]);
+
         $source_type = 
             OSCAR::FileUtils::file_type ("$download_dir/$src_file");
         if (!defined $source_type) {
@@ -426,6 +431,8 @@ sub create_binary ($$$$$$) {
                     return -1;
                 } 
             }
+			# FIXME: We blindly copy all packages (even old copies).
+			# We should query the src.rpm with rpmspec equivalent.
             $cmd = "mv *$name*.rpm $output";
             print "Executing: $cmd\n";
             if (system ($cmd)) {
