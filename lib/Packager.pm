@@ -278,8 +278,8 @@ sub prepare_rpm_env ($$$$$) {
 # given output directory
 #
 # Return: -1 if error, 0 else.
-sub move_binaryfiles($$) {
-    my ($spec, $output) = @_;
+sub move_binaryfiles($$$) {
+    my ($spec, $output, $sel) = @_;
 	my @rpms;
     chomp(my $rpmdir = `rpm --eval %{_rpmdir}`);
 	my $query_spec_cmd = "rpmspec -q";
@@ -287,18 +287,29 @@ sub move_binaryfiles($$) {
 	# rpmspec is the replacement of rpm -q --specfile. Fallback to old method
 	# if rpmspec not yet available.
 	$query_spec_cmd = "rpm -q --specfile " if ( ! -x '/usr/bin/rpmspec') ;
+
+	# Specify the target otherwize we won't fine what we are looking for.
+	# (building noarch part of the rpm, but trying to copy the default arch nbinaries)
+	my $target = "--target noarch" if ($sel == "common");
+
 	# Warning, do not move the %{arch} out of the rpmspec query (e.g. in the above rpmdir computation
 	# Otherwize it will evalutate to the host binary architecture while here, it'll evaluate to the
-	# BuildArch in the spec file (if not specified it is host binary arche, but it can be noarch)
-	@rpms = `$query_spec_cmd $spec --qf "$rpmdir/%{arch}/%{name}-%{version}-%{release}.%{arch}.rpm "`;
+	# BuildArch in the spec file (if not specified it is host binary arch, but it can be noarch)
+	@rpms = `$query_spec_cmd $spec $target --qf "$rpmdir/%{arch}/%{name}-%{version}-%{release}.%{arch}.rpm\n"`;
 	my $cmd;
     foreach my $rpm (@rpms) {
-		$cmd = "mv -f $rpm $output";
-		print "Moving " . File::Basename::basename ($rpm) . " to " . $output . "\n";
-		OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
-		if (system ($cmd)) {
-			carp "ERROR: Impossible to execute $cmd";
-			return -1;
+		chomp($rpm);
+		# We need to test the existance of the file to be moved.
+		# rpmspec -q --target noarch pkg.spec will often note produce the main package
+		# which is often a binary_arch package.
+		if ( -f $rpm ) {
+			$cmd = "mv -f $rpm $output";
+			print "Moving " . File::Basename::basename ($rpm) . " to " . $output . "\n";
+			OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
+			if (system ($cmd)) {
+				carp "ERROR: Impossible to execute $cmd";
+				return -1;
+			}
 		}
 	}
     return 0;
@@ -343,6 +354,7 @@ sub create_binary ($$$$$$) {
             # In the rpm-based system,
             # If the config file does not exist, we do not want to quit the program
             # but just proceed the build process with the given spec file.
+			# OL: FIXME: Need to add build.cfg options and use --target (sel)
             my $spec_file = "$packaging_dir/$name.spec";
             if (! -f $spec_file) {
                 $spec_file = "$packaging_dir/rpm/$name.spec";
@@ -352,7 +364,7 @@ sub create_binary ($$$$$$) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
             }
-            move_binaryfiles($spec_file, $output);
+            move_binaryfiles($spec_file, $output, $sel);
             return 0;
         }
         if($os->{pkg} eq "deb"){
@@ -406,10 +418,10 @@ sub create_binary ($$$$$$) {
 
 		@src_files = glob($source);
 		# We assume that the main archive is the 1st source file.
-		my $src_file = File::Basename::basename ($src_files[0]);
+		$source_file = File::Basename::basename ($src_files[0]);
 
         $source_type = 
-            OSCAR::FileUtils::file_type ("$download_dir/$src_file");
+            OSCAR::FileUtils::file_type ("$download_dir/$source_file");
         if (!defined $source_type) {
             carp "ERROR: Impossible to detect the source file format";
             return -1;
@@ -442,6 +454,7 @@ sub create_binary ($$$$$$) {
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
             # We copy the tarball in %{_sourcedir}
             foreach my $sf (@src_files){
+				$sf = File::Basename::basename ($sf);
                 $sf = "$download_dir/$sf";
                 File::Copy::copy ($sf, $src_dir) 
                     or (carp "ERROR: impossible to copy the file ($sf, $src_dir)",
@@ -450,16 +463,31 @@ sub create_binary ($$$$$$) {
 
             # We try to execute rpmbuild using the spec file
             chdir($packaging_dir);
+
             my $spec_file = "./$name.spec";
             if (! -f $spec_file) {
                 $spec_file = "./rpm/$name.spec";
             } 
-            $cmd = "rpmbuild -bb $spec_file";
+            $cmd = "rpmbuild -bb $spec_file ";
+			# Specify the target. old rpms were unable to build both architecture.
+			# For those rpms, we use the common: tag. Thus 2 build occures:
+			# one with --target=noarch and one without (arch build).
+			# On modern rpms, both arch and noarch sub rpms will be generated
+			# When rpmbuild is called without --target. For those modern rpms, there
+			# is no common: section in build.cfg.
+			#
+			# Line below useless for the moment:
+			# $cmd .= " --target noarch " if ($sel == "common");
+
+			# Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
+			my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
+			$cmd .= $rpmbuild_options;
+
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
             }
-            move_binaryfiles($spec_file, $output);
+            move_binaryfiles($spec_file, $output, $sel);
         } else {
             carp "ERROR: Unsupported file type for binary package creation ".
                  "($source_type)";

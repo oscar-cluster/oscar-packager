@@ -1,4 +1,13 @@
 1.1.0 (not yet released):
+- Fixed Packager.pm to support {} in source allowing for more than one source
+to be downloaded. The main source must be the 1st one.
+example:
+http://url_to_donwload_site/{main_archive.tar.gz,main_archive/addon.png, ...}
+- Fixed Packager.pm building package without build options specified in the
+builc.cfg file.
+- Fixed oscar-packager to build only once the package instead of 5 times in
+case of an src.rpm in the package.cfg accompanied with a Makefile in the svn
+tree.
 - Moved all %SOURCE and %PATCHES files that were in opkg/<name>/trunk/rpm
 into a subdirectory so it's easy to copy only files specific to a spec file
 It also permit to have a file with the same name E.g. README in 2 different
