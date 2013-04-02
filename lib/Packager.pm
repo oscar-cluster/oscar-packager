@@ -406,7 +406,7 @@ sub create_binary ($$$$$$) {
 
 		@src_files = glob($source);
 		# We assume that the main archive is the 1st source file.
-		my src_file = File::Basename::basename ($src_files[0]);
+		my $src_file = File::Basename::basename ($src_files[0]);
 
         $source_type = 
             OSCAR::FileUtils::file_type ("$download_dir/$src_file");
