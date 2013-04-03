@@ -454,7 +454,7 @@ sub create_binary ($$$$$$) {
 			if($sel == "common") {
 				$cmd = "mv $rpmdir/noarch";
 			} else {
-				my $binary_arch = os->{arch};
+				my $binary_arch = $os->{arch};
 				$binary_arch =~ s/^i.86$/i?86/;
 				$cmd = "mv $rpmdir/".$binary_arch;
 			}
