@@ -290,7 +290,8 @@ sub move_binaryfiles($$$) {
 
 	# Specify the target otherwize we won't fine what we are looking for.
 	# (building noarch part of the rpm, but trying to copy the default arch nbinaries)
-	my $target = "--target noarch" if ($sel == "common");
+	my $target = "";
+	$target = "--target noarch" if ("$sel" eq "common");
 
 	# Warning, do not move the %{arch} out of the rpmspec query (e.g. in the above rpmdir computation
 	# Otherwize it will evalutate to the host binary architecture while here, it'll evaluate to the
@@ -448,17 +449,8 @@ sub create_binary ($$$$$$) {
                     return -1;
                 } 
             }
-			# FIXME: We blindly copy all packages (even old copies).
-			# We should query the src.rpm with rpmspec equivalent.
-			chomp( my $rpmdir = `rpm --eval '%{_rpmdir}/'` );
-			if($sel == "common") {
-				$cmd = "mv $rpmdir/noarch";
-			} else {
-				my $binary_arch = $os->{arch};
-				$binary_arch =~ s/^i.86$/i?86/;
-				$cmd = "mv $rpmdir/".$binary_arch;
-			}
-            $cmd .= "/*$name*.rpm $output";
+			# Resulting rpms are stored in the cuirrent directory.
+            $cmd = "mv ./*$name*.rpm $output";
             print "Executing: $cmd\n";
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
@@ -490,7 +482,7 @@ sub create_binary ($$$$$$) {
 			# is no common: section in build.cfg.
 			#
 			# Line below useless for the moment:
-			# $cmd .= " --target noarch " if ($sel == "common");
+			# $cmd .= " --target noarch " if ("$sel" eq "common");
 
 			# Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
 			my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
