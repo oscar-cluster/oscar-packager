@@ -450,10 +450,10 @@ sub create_binary ($$$$$$) {
             }
 			# FIXME: We blindly copy all packages (even old copies).
 			# We should query the src.rpm with rpmspec equivalent.
-			chomp(my rpmdir = `rpm --eval '%{_rpmdir}/'`);
+			chomp( my $rpmdir = `rpm --eval '%{_rpmdir}/'` );
 			if($sel == "common") {
 				$cmd = "mv $rpmdir/noarch";
-			} else {
+			} else {
 				my $binary_arch = $os->{arch};
 				$binary_arch =~ s/^i.86$/i?86/;
 				$cmd = "mv $rpmdir/".$binary_arch;
