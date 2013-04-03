@@ -354,12 +354,17 @@ sub create_binary ($$$$$$) {
             # In the rpm-based system,
             # If the config file does not exist, we do not want to quit the program
             # but just proceed the build process with the given spec file.
-			# OL: FIXME: Need to add build.cfg options and use --target (sel)
+
             my $spec_file = "$packaging_dir/$name.spec";
             if (! -f $spec_file) {
                 $spec_file = "$packaging_dir/rpm/$name.spec";
             } 
             my $cmd = "rpmbuild -bb $spec_file";
+
+			# Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
+			my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
+			$cmd .= $rpmbuild_options;
+
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
@@ -445,7 +450,15 @@ sub create_binary ($$$$$$) {
             }
 			# FIXME: We blindly copy all packages (even old copies).
 			# We should query the src.rpm with rpmspec equivalent.
-            $cmd = "mv *$name*.rpm $output";
+			chomp(my rpmdir = `rpm --eval '%{_rpmdir}/'`);
+			if($sel == "common") {
+				$cmd = "mv $rpmdir/noarch";
+			} else {
+				my $binary_arch = os->{arch};
+				$binary_arch =~ s/^i.86$/i?86/;
+				$cmd = "mv $rpmdir/".$binary_arch;
+			}
+            $cmd .= "/*$name*.rpm $output";
             print "Executing: $cmd\n";
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
