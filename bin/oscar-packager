@@ -367,6 +367,7 @@ sub create_package ($$) {
                 if (-f "$packaging_dir/$c/Makefile") {
                     $cmd .= "make rpm PKGDEST=$pkg_destdir";
                     # Get the sourcedir (varies on distro)
+					# OL: this is useless, Makefiles now  uses rpm --eval '%_sourcedir' 
                     my $src_dir=`rpm --eval '%{_sourcedir}'`;
                     $cmd .= " SOURCEDIR=".$src_dir;
                     $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
