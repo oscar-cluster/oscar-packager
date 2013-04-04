@@ -18,6 +18,7 @@ uninstall:
 
 clean:
 	@rm -f *~
+	@rm -f $(NAME).spec
 	@rm -f build-stamp configure-stamp debian/files
 	@rm -rf debian/oscar-packager*
 	@rm -f $(PKG).tar.gz
@@ -36,7 +37,10 @@ dist: clean
 
 rpm: dist
 	@cp $(PKG).tar.gz `rpm --eval '%_sourcedir'`
-	rpmbuild -bb ./$(NAME).spec
+	rpmbuild -bb --target noarch ./$(NAME).spec
+	@if [ -n "$(PKGDEST)" ] ; then \
+		mv $(shell rpm --eval '%_rpmdir')/noarch/$(PKG)-*noarch.rpm $(PKGDEST); \
+	fi
 
 deb:
 	dpkg-buildpackage -rfakeroot
