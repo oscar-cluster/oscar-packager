@@ -1,6 +1,6 @@
 Summary:        OSCAR Packaging helpers.
 Name:           oscar-packager
-Version:        1.1.0
+Version:        __VERSION__
 Release:        0.33
 Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
 Distribution:   OSCAR
