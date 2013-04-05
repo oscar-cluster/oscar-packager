@@ -1,13 +1,13 @@
 Summary:        OSCAR Packaging helpers.
 Name:           oscar-packager
 Version:        __VERSION__
-Release:        0.40
+Release:        0.41
 Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
 Distribution:   OSCAR
 Packager:       Olivier Lahaye <olivier.lahaye@cea.fr>
 License:        GPL
 Group:          Development/Libraries
-Source:         %{name}.tar.gz
+Source:         %{name}-%{version}.tar.gz
 BuildRoot:      %{_localstatedir}/tmp/%{name}-root
 BuildArch:      noarch
 AutoReqProv: 	no
@@ -17,7 +17,7 @@ Requires:       wget, oscar-base-lib, rpm-build, subversion
 Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 
 %prep
-%setup -n %{name}
+%setup
 
 %install
 %__make install DESTDIR=$RPM_BUILD_ROOT
@@ -30,6 +30,9 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Thu Apr 04 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.41
+- New beta version (see changelog)
+
 * Thu Apr 04 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.40
 - New beta version (see changelog)
 - spec version updated from Makefile.

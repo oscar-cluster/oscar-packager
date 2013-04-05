@@ -1,4 +1,9 @@
 1.1.0 (not yet released):
+- Fixed semf destruct when building itself: would remove
+/tmp/oscar-packager/oscar-packager (self) when preparing build environment.
+Now we use normal archive name with version in it.
+- Take into account that the rpm command is either located in /bin or
+/usr/bin.
 - Fixed Packager.pm to support {} in source allowing for more than one source
 to be downloaded. The main source must be the 1st one.
 example:
