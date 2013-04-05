@@ -143,20 +143,23 @@ sub build_rpm_pkgs ($$$) {
 	my $query_spec_cmd = "rpmspec -q";
 
 	# rpmspec is the replacement of rpm -q --specfile. Fallback to old method
-	# if rpmspec not yet available.
+	# if rpmspec not yet available. (assuming that rpmspec is always located at /usr/bin)
 	$query_spec_cmd = "rpm -q --specfile " if ( ! -x '/usr/bin/rpmspec') ;
 
     foreach my $spec (@spec_files) {
         $cmd = "rpmbuild -bb $spec";
+	# OL: FIXME? Warning, no target specified: either it's a binary pkg or the BuildArch: is forced in the spec.
         OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
         if (system ($cmd)) {
             carp "ERROR: Impossible to execute $cmd";
             return -1;
         }
 		# Copy resulting rpms to $output.
+		# OL: FIXME? Warning, no target specified.....Same as above FIXME.
 		OSCAR::Logger::oscar_log_subsection ("Copying Resulting RPMS to $output");
 		@rpms = `$query_spec_cmd $spec --qf "$rpmdir/%{arch}/%{name}-%{version}-%{release}.%{arch}.rpm "`;
         if (scalar (@rpms) > 0) {
+            # OL: FIXME: Sometimes we move, sometimes, we copy, this should be unified.
             copy_files (\@rpms, $output);
         }
     }

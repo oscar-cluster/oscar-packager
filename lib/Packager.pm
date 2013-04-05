@@ -291,8 +291,10 @@ sub move_binaryfiles($$$) {
 	# Specify the target otherwize we won't fine what we are looking for.
 	# (building noarch part of the rpm, but trying to copy the default arch nbinaries)
 	my $target = "";
-	$target = "--target noarch" if ("$sel" eq "common");
-
+	if ("$sel" eq "common") {
+	    $target = "--target noarch";
+	    $target = "--define '%_target_cpu noarch'"; if ($query_spec_cmd =~ /--specfile/) 
+	}
 	# Warning, do not move the %{arch} out of the rpmspec query (e.g. in the above rpmdir computation
 	# Otherwize it will evalutate to the host binary architecture while here, it'll evaluate to the
 	# BuildArch in the spec file (if not specified it is host binary arch, but it can be noarch)
