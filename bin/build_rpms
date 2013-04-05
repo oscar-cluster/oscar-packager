@@ -31,7 +31,7 @@ run_cmd () {
 	echo ">> $1" 1>&2
     fi
     if [ -z "$TEST" ]; then
-	eval $1
+	LC_ALL=C eval $1
 	return $?
     fi
 }
@@ -43,7 +43,7 @@ build_srpm () {
        echo ">> rpmbuild -bs $SPECF" 1>&2
    fi
    if [ -z "$TEST" ]; then  
-       SRPM=`rpmbuild -bs $SPECF | grep ^Wrote: | awk '{print $2}'`
+       SRPM=`LC_ALL=C rpmbuild -bs $SPECF | grep ^Wrote: | awk '{print $2}'`
    fi
    if [ -f $SRPM ]; then
        run_cmd "mv $SRPM ."

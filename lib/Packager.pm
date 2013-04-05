@@ -288,7 +288,7 @@ sub move_binaryfiles($$$) {
 	# if rpmspec not yet available.
 	$query_spec_cmd = "rpm -q --specfile " if ( ! -x '/usr/bin/rpmspec') ;
 
-	# Specify the target otherwize we won't fine what we are looking for.
+	# Specify the target otherwize we won't find what we are looking for.
 	# (building noarch part of the rpm, but trying to copy the default arch nbinaries)
 	my $target = "";
 	if ("$sel" eq "common") {
@@ -451,7 +451,7 @@ sub create_binary ($$$$$$) {
                     return -1;
                 } 
             }
-			# Resulting rpms are stored in the cuirrent directory.
+			# Resulting rpms are stored in the current directory.
             $cmd = "mv ./*$name*.rpm $output";
             print "Executing: $cmd\n";
             if (system ($cmd)) {
