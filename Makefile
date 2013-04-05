@@ -38,8 +38,17 @@ dist: clean
 rpm: dist
 	@cp $(PKG).tar.gz `rpm --eval '%_sourcedir'`
 	rpmbuild -bb --target noarch ./$(NAME).spec
-	@if [ -n "$(PKGDEST)" ] ; then \
-		mv $(shell rpm --eval '%_rpmdir')/noarch/$(PKG)-*noarch.rpm $(PKGDEST); \
+	@if [ -n "$(PKGDEST)" ]; then \
+		RPMDIR=$(shell rpm --eval '%{_rpmdir}') ;\
+		RPMSPEC_CMD="/usr/bin/rpm --specfile -q"; \
+		[ -f /usr/bin/rpmspec ] && RPMSPEC_CMD="/usr/bin/rpmspec -q";\
+		FILES=$$($${RPMSPEC_CMD} --target noarch $(NAME).spec --qf '%{name}-%{version}-%{release}.%{arch}.rpm ');\
+		echo "Moving file(s) ($${FILES}) to $(PKGDEST)"; \
+		for FILE in $${FILES}; \
+		do \
+			echo "   $${FILE} --> $(PKGDEST)"; \
+			mv $${RPMDIR}/noarch/$${FILE} $(PKGDEST); \
+		done; \
 	fi
 
 deb:
