@@ -38,13 +38,14 @@ dist: clean
 rpm: dist
 	@cp $(PKG).tar.gz `rpm --eval '%_sourcedir'`
 	rpmbuild -bb --target noarch ./$(NAME).spec
-	@if [ -n "$(PKGDEST)" ]; then \
+	if [ -n "$(PKGDEST)" ]; then \
 		RPMDIR=$(shell rpm --eval '%{_rpmdir}') ;\
-		RPMSPEC_CMD="/usr/bin/rpm --specfile -q"; \
-		[ -f /usr/bin/rpmspec ] && RPMSPEC_CMD="/usr/bin/rpmspec -q";\
-		FILES=$$($${RPMSPEC_CMD} --target noarch $(NAME).spec --qf '%{name}-%{version}-%{release}.%{arch}.rpm ');\
-		echo "Moving file(s) ($${FILES}) to $(PKGDEST)"; \
-		for FILE in $${FILES}; \
+		(which rpmspec 2>/dev/null) && RPMSPEC_CMD="rpmspec --target noarch" || RPMSPEC_CMD="rpm --specfile --define '%_target_cpu noarch'"; \
+		CMD="$$RPMSPEC_CMD -q $(NAME).spec --qf '%{name}-%{version}-%{release}.%{arch}.rpm '"; \
+		echo "Determining which files to retreive using: $$CMD";\
+		FILES=`eval $$CMD`;\
+		echo "Moving file(s) ($$FILES) to $(PKGDEST)"; \
+		for FILE in $$FILES; \
 		do \
 			echo "   $${FILE} --> $(PKGDEST)"; \
 			mv $${RPMDIR}/noarch/$${FILE} $(PKGDEST); \
