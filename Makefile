@@ -38,7 +38,7 @@ dist: clean
 rpm: dist
 	@cp $(PKG).tar.gz `rpm --eval '%_sourcedir'`
 	rpmbuild -bb --target noarch ./$(NAME).spec
-	if [ -n "$(PKGDEST)" ]; then \
+	@if [ -n "$(PKGDEST)" ]; then \
 		RPMDIR=$(shell rpm --eval '%{_rpmdir}') ;\
 		(which rpmspec 2>/dev/null) && RPMSPEC_CMD="rpmspec --target noarch" || RPMSPEC_CMD="rpm --specfile --define '%_target_cpu noarch'"; \
 		CMD="$$RPMSPEC_CMD -q $(NAME).spec --qf '%{name}-%{version}-%{release}.%{arch}.rpm '"; \
