@@ -1,4 +1,5 @@
 1.1.0 (not yet released):
+- Added systemconfigurator
 - Fixed semf destruct when building itself: would remove
 /tmp/oscar-packager/oscar-packager (self) when preparing build environment.
 Now we use normal archive name with version in it.
