@@ -471,6 +471,16 @@ sub create_binary ($$$$$$) {
             # We try to execute rpmbuild using the spec file
             chdir($packaging_dir);
 
+            # We try to copy the rpm additional sources that are in ./rpm/$name/ if any.
+            if ( -d "./rpm/$name/" ) {
+                opendir( DIR, "./rpm/$name/" ) || die "Fail to opendir ./rpm/$name : $!\n";
+                my @elmts = grep !/(?:^\.$)|(?:^\.\.$)/, readdir DIR;
+                closedir DIR; 
+                foreach ( @elmts ) {
+                    File::Copy::copy ( "./rpm/$name/$_" , $src_dir)
+                }
+            }
+
             my $spec_file = "./$name.spec";
             if (! -f $spec_file) {
                 $spec_file = "./rpm/$name.spec";
