@@ -759,16 +759,18 @@ sub prepare_prereqs ($$) {
     my $cmd = "";
     my $run_script = "";
     if ($os->{pkg} eq "rpm") {
-	$run_script = "$dir/build_rpm.sh";
+	    $run_script = "$dir/build_rpm.sh";
         #$cmd = "mv $dir/*.rpm $output";
     } elsif ($os->{pkg} eq "deb") {
-	$run_script = "$dir/build_deb.sh";
+        $run_script = "$dir/build_deb.sh";
     } else {
         carp "ERROR: $os->{pkg} is not currently supported";
         return -1;
     }
 
     if( -f $run_script ){
+        my $pkg_destdir=main::get_pkg_dest();
+		$run_script="cd $dir; LC_ALL=C PKGDEST=$pkg_destdir $run_script";
         print "Executing: $run_script\n";
         if (system ($run_script)) {
             carp "ERROR: Impossible to execute $cmd";
