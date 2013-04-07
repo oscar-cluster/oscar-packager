@@ -1,4 +1,5 @@
 1.1.0 (not yet released):
+- Setup PKGDEST env variable before calling build_{deb,rpm}.sh script.
 - Added systemconfigurator
 - Fixed semf destruct when building itself: would remove
 /tmp/oscar-packager/oscar-packager (self) when preparing build environment.
