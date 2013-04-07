@@ -1,6 +1,18 @@
 1.1.0 (not yet released):
 - Setup PKGDEST env variable before calling build_{deb,rpm}.sh script.
-- Added systemconfigurator
+- Added:
+  - systemimager + bittorent + flamethrower
+  - systemconfigurator
+  - systeminstaller-oscar
+  - oscar-packager
+  - opkgc
+  - pvm
+  - network-configurator
+  - loghost
+  - oscar-v
+  - oscar-installer
+  - oscar-nat
+  - system-update
 - Fixed semf destruct when building itself: would remove
 /tmp/oscar-packager/oscar-packager (self) when preparing build environment.
 Now we use normal archive name with version in it.
