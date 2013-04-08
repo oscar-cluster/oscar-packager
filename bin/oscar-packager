@@ -441,6 +441,8 @@ sub parse_config($$){
 sub do_packaging ($$) {
     my ($config_file, $opkg_conffile) = @_;
     my @failed_comp = ();
+	my @main_failed_comp = ();
+	my @meta_failed_comp = ();
 
     # We now create binary packages for each components.
     if (! -f $config_file) {
@@ -463,28 +465,35 @@ sub do_packaging ($$) {
     # Get the list of opkgs by parsing the package config file with "source"
     my $ocpts =  parse_config($opkg_conffile, "source");
 
-    @failed_comp = create_package ($cpts, $precmds);
-    if (scalar (@failed_comp) > 0) {
+    @main_failed_comp = create_package ($cpts, $precmds);
+    if (scalar (@main_failed_comp) > 0) {
         carp "Errors occured during the OSCAR packaging.\n".
              "OSCAR components that failed are: ";
-        OSCAR::Utils::print_array (@failed_comp);
-        exit 1;
+        OSCAR::Utils::print_array (@main_failed_comp);
+        # exit 1;
     }
 
     # We now create the meta-package for all core OPKGs.
     if (-f $opkg_conffile) {
-        @failed_comp = create_opkgs_metapkg ($ocpts);
-        if (scalar (@failed_comp) > 0) {
+        @meta_failed_comp = create_opkgs_metapkg ($ocpts);
+        if (scalar (@meta_failed_comp) > 0) {
             carp "Errors occured during the creation of meta-packages for ".
                 "available OPKGs";
-            OSCAR::Utils::print_array (@failed_comp);
-            exit 1;
+            OSCAR::Utils::print_array (@meta_failed_comp);
+            # exit 1;
         }
     } else {
         print "[INFO] No configuration for OPKGs found, skipping that step ".
             "($opkg_conffile)\n";
     }
 
+	# Build failed comp sumup.
+	@failed_comp = ( @main_failed_comp , @meta_failed_comp );
+	if (scalar (@failed_comp) > 0) {
+            carp "Errors occured during the creation of meta-packages for ".
+                "available OPKGs";
+            OSCAR::Utils::print_array (@failed_comp);
+	}
     return @failed_comp;
 }
 
