@@ -490,7 +490,7 @@ sub do_packaging ($$) {
 	# Build failed comp sumup.
 	@failed_comp = ( @main_failed_comp , @meta_failed_comp );
 	if (scalar (@failed_comp) > 0) {
-            carp "Errors occured during the creation of meta-packages for ".
+            carp "Errors occured during the creation of packages for ".
                 "available OPKGs";
             OSCAR::Utils::print_array (@failed_comp);
 	}
@@ -599,15 +599,20 @@ if ($all) {
 }
 
 
-my @failed_comp = package_core ($core, \@releases, $config_file_path);
-if (scalar (@failed_comp) > 0) {
-    die "ERROR: Impossible to package the following component (".
-        scalar(@failed_comp).": ".join (", ", @failed_comp);
-}
-@failed_comp = package_included ($included, \@releases, $config_file_path);
-if (scalar (@failed_comp) > 0) {
-    die "ERROR: Impossible to package the following OPKGs (".
-        scalar(@failed_comp).": ".join (", ", @failed_comp);
+my @core_failed_comp = package_core ($core, \@releases, $config_file_path);
+my @included_failed_comp = package_included ($included, \@releases, $config_file_path);
+
+OSCAR::Logger::oscar_log_section ("OSCAR Packager compilation results:");
+my @all_failed_comp = ( @core_failed_comp , @included_failed_comp );
+
+my $exit_code=0;
+
+if (scalar (@all_failed_comp) > 0) {
+	OSCAR::Logger::oscar_log_subsection("Packaging was not 100% successfull. Packages that fails to build are:");
+	OSCAR::Utils::print_array (@all_failed_comp);
+	$exit_code=1;
+} else {
+	OSCAR::Logger::oscar_log_subsection("Packaging was 100% successfull!");
 }
 
 # Before to exit, we restore the initial OSCAR_VERBOSE value
@@ -617,7 +622,7 @@ if (defined $initial_verbose) {
 
 OSCAR::Logger::oscar_log_section ("OSCAR Packager Ending");
 
-exit 0;
+exit $exit_code;
 
 __END__
 
