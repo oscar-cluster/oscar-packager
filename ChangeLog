@@ -14,6 +14,7 @@
   - oscar-nat
   - system-update
   - jobmonarch + pyPgSQL + pbs_python
+  - kernel_picker
 - Fixed semf destruct when building itself: would remove
 /tmp/oscar-packager/oscar-packager (self) when preparing build environment.
 Now we use normal archive name with version in it.
