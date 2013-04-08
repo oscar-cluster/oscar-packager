@@ -1,4 +1,7 @@
 1.1.0 (not yet released):
+- Don't stop build if one package in main(core) or main(included) fails.
+  Still build opkgs.
+- Correct reports of all errors at the end of the build.
 - Setup PKGDEST env variable before calling build_{deb,rpm}.sh script.
 - Added:
   - systemimager + bittorent + flamethrower
