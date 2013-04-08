@@ -117,7 +117,7 @@ sub create_opkgs_metapkg ($) {
     my @failed_comp;
 
 
-    OSCAR::Logger::oscar_log_section "Creating OPKG meta-packages...";
+    oscar_log_section "Creating OPKG meta-packages...";
 
     $pkg_destdir = get_pkg_dest ();
     if (!defined $pkg_destdir) {
@@ -203,7 +203,7 @@ sub create_opkgs_metapkg ($) {
         push (@failed_comp, $cmd);
     }
 
-    OSCAR::Logger::oscar_log_section "[INFO] Generated binary packages ".
+    oscar_log_section "[INFO] Generated binary packages ".
         "are in $pkg_destdir";
 
     return @failed_comp
@@ -358,7 +358,7 @@ sub create_package ($$) {
                     $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
                 }
             } else {
-                oscar_log_subsection ("ERROR: Unknown type ($file_type)");
+                oscar_log_subsection "ERROR: Unknown type ($file_type)";
                 push (@failed_comp, $c);
             }
         } elsif ($os->{pkg} eq "rpm") {
@@ -375,7 +375,7 @@ sub create_package ($$) {
             } elsif ($file_type eq OSCAR::Defs::SRPM()) {
                 $cmd .= "rpmbuild --rebuild $filename";
             } else {
-                oscar_log_subsection ("ERROR: Unknown type ($file_type)");
+                oscar_log_subsection "ERROR: Unknown type ($file_type)";
                 push (@failed_comp, $c);
             }
         } else {
@@ -406,7 +406,7 @@ sub create_package ($$) {
         push (@failed_comp, $cmd);
     }
 
-    OSCAR::Logger::oscar_log_section "[INFO] Generated binary packages ".
+    oscar_log_section "[INFO] Generated binary packages ".
         "are in $pkg_destdir";
 
     return @failed_comp;
@@ -510,13 +510,13 @@ sub package_core ($$$) {
     if ($core && OSCAR::Utils::is_element_in_array($core, @$releases) ) {
         $config_file = "$conffilepath/core_stable_$core.cfg";
         $opkg_conffile = "$conffilepath/core_opkgs_$core.cfg";
-        OSCAR::Logger::oscar_log_subsection ("Packaging stable OSCAR core ($core)");
+        oscar_log_subsection "Packaging stable OSCAR core ($core)";
     }
 
     if ($core && !OSCAR::Utils::is_element_in_array($core, @$releases)) {
         $config_file = "$conffilepath/core_unstable.cfg";
         $opkg_conffile = "$conffilepath/core_opkgs_unstable.cfg";
-        OSCAR::Logger::oscar_log_subsection ("Packaging unstable OSCAR core");
+        oscar_log_subsection "Packaging unstable OSCAR core";
     }
 
     @failed_comp = do_packaging ($config_file, $opkg_conffile);
@@ -537,13 +537,13 @@ sub package_included ($$$) {
     if ($included && OSCAR::Utils::is_element_in_array($included, @$releases)) {
         $config_file = "$conffilepath/included_stable_$included.cfg";
         $opkg_conffile = "$conffilepath/included_opkgs_$included.cfg";
-        OSCAR::Logger::oscar_log_subsection ("Packaging stable included OPKGs ($included)");
+        oscar_log_subsection "Packaging stable included OPKGs ($included)";
     }
 
     if ($included && !OSCAR::Utils::is_element_in_array($included, @$releases)) {
         $config_file = "$conffilepath/included_unstable.cfg";
         $opkg_conffile = "$conffilepath/included_opkgs_unstable.cfg";
-        OSCAR::Logger::oscar_log_subsection ("Packaging unstable included OPKGs");
+        oscar_log_subsection "Packaging unstable included OPKGs";
     }
 
     @failed_comp = do_packaging ($config_file, $opkg_conffile);
@@ -591,7 +591,7 @@ if ($available_releases) {
 # Read the .oscar_pkg file
 read_built_pkgs_file();
 
-OSCAR::Logger::oscar_log_section ("OSCAR Packager Starting...");
+oscar_log_section "OSCAR Packager Starting...";
 
 if ($all) {
     $core = $all;
@@ -602,17 +602,17 @@ if ($all) {
 my @core_failed_comp = package_core ($core, \@releases, $config_file_path);
 my @included_failed_comp = package_included ($included, \@releases, $config_file_path);
 
-OSCAR::Logger::oscar_log_section ("OSCAR Packager compilation results:");
+oscar_log_section "OSCAR Packager compilation results:";
 my @all_failed_comp = ( @core_failed_comp , @included_failed_comp );
 
 my $exit_code=0;
 
 if (scalar (@all_failed_comp) > 0) {
-	OSCAR::Logger::oscar_log_subsection("Packaging was not 100% successfull. Packages that fails to build are:");
+	print "[WARNING] --> Packaging was not 100% successfull. Packages that fails to build are:\n";
 	OSCAR::Utils::print_array (@all_failed_comp);
 	$exit_code=1;
 } else {
-	OSCAR::Logger::oscar_log_subsection("Packaging was 100% successfull!");
+	print "[INFO] --> Packaging was 100% successfull!\n";
 }
 
 # Before to exit, we restore the initial OSCAR_VERBOSE value
@@ -620,7 +620,7 @@ if (defined $initial_verbose) {
     $ENV{OSCAR_VERBOSE} = $initial_verbose;
 }
 
-OSCAR::Logger::oscar_log_section ("OSCAR Packager Ending");
+oscar_log_section "OSCAR Packager Ending";
 
 exit $exit_code;
 
