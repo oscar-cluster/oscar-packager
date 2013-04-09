@@ -364,7 +364,7 @@ sub create_package ($$) {
 
         # We make sure we pre-process the downloaded files.
         if ($file_type eq OSCAR::Defs::TARBALL()) {
-            if (extract_file("$filename","$packaging_dir/$c")) {
+            if (extract_file("$packaging_dir/$c/$filename","$packaging_dir/$c")) {
                 print "ERROR: [create_package: extract_file] Impossible to extract $filename\n";
                 push (@failed_comp, $c);
 				# Stop here: no extraction means no build.
