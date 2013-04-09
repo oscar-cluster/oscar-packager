@@ -1,4 +1,8 @@
 1.1.0 (not yet released):
+- Stop build package on error and skip to next one avoiding to wrongly report
+a success.
+- Output reworked a lot to ease reading and debug. $debug and $verbose
+  forwarded to Packager.pm
 - Don't stop build if one package in main(core) or main(included) fails.
   Still build opkgs.
 - Correct reports of all errors at the end of the build.

@@ -48,11 +48,16 @@ GetOptions(
         "help"                              => \&help_and_exit,
         ) || help_and_die();
 
+
 # Global variables
 our $packaging_dir = "/tmp/oscar-packager";
 my $config_file_path = "/etc/oscar/oscar-packager";
 my $built_pkgs = "$config_file_path/.oscar_pkgs";
 my %already_built = ();
+
+# Propagate the verbose and debug switches.
+$OSCAR::Packager::verbose = $verbose;
+$OSCAR::Packager::debug = $debug;
 
 sub pkgdir_cleanup () {
     if (-d $packaging_dir) {
@@ -117,7 +122,7 @@ sub create_opkgs_metapkg ($) {
     my @failed_comp;
 
 
-    oscar_log_section "Creating OPKG meta-packages...";
+    print "\n[INFO] Creating OPKG meta-packages...\n";
 
     $pkg_destdir = get_pkg_dest ();
     if (!defined $pkg_destdir) {
@@ -139,7 +144,8 @@ sub create_opkgs_metapkg ($) {
         # Check to see if the package is already built or not
         # If not, go ahead. Otherwise, move on to the next
         elsif(is_built($c, $category) and !$force){
-	    OSCAR::Logger::oscar_log_subsection "The package ($c) is already built.";
+	    	#OSCAR::Logger::oscar_log_subsection "The package ($c) is already built.";
+	    	print "[INFO] --> The packages (opkg-$c opkg-$c-client opkg-$c-server) are already built.\n";
             next;
         }
 
@@ -149,37 +155,45 @@ sub create_opkgs_metapkg ($) {
         my ($method, $url) = split (",", $source);
         if ($method eq "svn") {
             # We check out SVN
-            $cmd = "cd $packaging_dir; svn co $url opkg-$c ";
-            $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+            $cmd = "cd $packaging_dir; svn co $url opkg-$c";
+            $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             if (system $cmd) {
                 carp "ERROR: Impossible to execute $cmd";
                 push (@failed_comp, $c);
+				# Failed to retreive the source... next and avoid marking the package as built.
+				next;
             }
         } else {
             carp "ERROR: Unknown method to access source ($method)";
             push (@failed_comp, $c);
+			# Don't know how to retreive the source. next and avoid marking the package as built.
+			next;
         }
 
         # We compile
         require OSCAR::PackagePath;
         my $distro_id = OSCAR::PackagePath::get_distro ();
         if (!OSCAR::Utils::is_a_valid_string ($distro_id)) {
+			# FIXME: should return an array of failed comp
             return "ERROR: Impossible to get the distro ID";
         }
         my $compat_id = OSCAR::PackagePath::get_compat_distro ($distro_id);
         if (!OSCAR::Utils::is_a_valid_string ($compat_id)) {
+			# FIXME: should return an array of failed comp
             return "ERROR: Impossible to detect the compat distro ($distro_id)";
         }
         my ($compat_dist, @trash) = split ("-", $compat_id);
-        $cmd = "cd $packaging_dir/opkg-$c; ";
-        $cmd .= "opkgc --dist $compat_dist --output $pkg_destdir ";
-        $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
+        $cmd = "cd $packaging_dir/opkg-$c;";
+        $cmd .= "opkgc --dist $compat_dist --output $pkg_destdir";
+        $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
         OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
         if (system ($cmd)) {
             OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
                 "build opkg-$c ($cmd)";
             push (@failed_comp, "opkg-$c");
+			# Failed to build the package, go to next
+			next;
         }else{
             my $timestamp = localtime;
             my $str = "$category:$c";
@@ -194,17 +208,18 @@ sub create_opkgs_metapkg ($) {
         }
         # once the opkg is built, remove its source tarball.
         system("rm -f $pkg_destdir/opkg-$c-*.tar.gz");
+		# FIXME: The above command fails for opkg-oscarv-1.0.tar.gz and opkg-ssi-oscar-2.1.1.tar.gz
     }
 
     $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
     $cmd .= " --verbose" if $debug;
+    $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
     if (system($cmd)) {
         carp "ERROR: Impossible to execute $cmd";
-        push (@failed_comp, $cmd);
+        #push (@failed_comp, $cmd);
     }
 
-    oscar_log_section "[INFO] Generated binary packages ".
-        "are in $pkg_destdir";
+	print "[INFO] $pkg_destdir repo index has been updated\n";
 
     return @failed_comp
 }
@@ -252,6 +267,7 @@ sub create_package ($$) {
     #
     $pkg_destdir = get_pkg_dest ();
     if (!defined $pkg_destdir) {
+		# FIXME: should return an array of errors, not a string.
         return "ERROR: Impossible to get the destination for packages";
     }
 
@@ -263,6 +279,7 @@ sub create_package ($$) {
     my $os = OSCAR::OCA::OS_Detect::open();
     if (!defined $os) {
         carp "ERROR: Impossible to detect the binary package format";
+		# FIXME: should return an array of errors, not a string.
         return "OS not detected";
     }
 
@@ -276,80 +293,100 @@ sub create_package ($$) {
         my ($current_opkg, $category) = split(":", $opkgs, 2);
         $category .= ":package";
         if( not ($current_opkg =~ m/current_opkg/ or $current_opkg =~ m/stable/) ){
-           next if ($current_opkg ne $c);
+            next if ($current_opkg ne $c);
         }
         # Check to see if the package is already built or not
         # If not, go ahead. Otherwise, move on to the next
         elsif(is_built($c, $category) and !$force){
-	    OSCAR::Logger::oscar_log_subsection "The package ($c) is already built.";
+	    #OSCAR::Logger::oscar_log_subsection "The package ($c) is already built.";
+	        print "[INFO] --> The package ($c) is already built.\n";
             next;
         }
 
 
-        OSCAR::Logger::oscar_log_subsection "Packaging $c...";
+        #OSCAR::Logger::oscar_log_subsection "Packaging $c...";
+        print "[INFO] --> Packaging: $c...\n";
         my $source = $$cpts{$c};
         my ($method, $url) = split (",", $source);
         if ($method eq "svn") {
             # We check out SVN
             $file_type = OSCAR::Defs::SVN();
-            $cmd = "cd $packaging_dir; svn co $url $c ";
-            $cmd .= "1>/dev/null 2>/dev/null" if (!$debug);
-            OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
+            $cmd = "cd $packaging_dir; svn co $url $c";
+            $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
+            OSCAR::Logger::oscar_log_subsection "[create_package] Executing: $cmd";
             if (system $cmd) {
-                carp "ERROR: Impossible to execute $cmd";
+                print "ERROR:[create_package] Failed to execute $cmd\n";
                 push (@failed_comp, $c);
+				# No source: stop here. Go to next package.
+				next;
             }
         } elsif ($method eq "wget") {
             require OSCAR::Defs;
             my $dest = "$packaging_dir/$c";
             $filename = File::Basename::basename($url);
             if (!OSCAR::Utils::is_a_valid_string ($filename)) {
-                return "ERROR: Impossible to get file name ($filename)";
+                print "ERROR: [create_package] mpossible to get file name ($filename) from url $url\n";
+                push (@failed_comp, $c);
+				# No source: stop here. Go to next package.
+				next;
             }
+			# FIXME: Need to propagate $verbose to OSCAR::FileUtils::verbose...
+			# FIXME: Need to check the return code: in cas download fails.
             OSCAR::FileUtils::download_file ($url, "$dest", "wget",
                 OSCAR::Defs::OVERWRITE());
             $file_type = OSCAR::FileUtils::file_type ("$dest/$filename");
         } else {
-            carp "ERROR: Unknown method to access source ($method)";
+            print "ERROR: [create_package] Unknown method to access source ($method)\n";
             push (@failed_comp, $c);
+			# Stop here: Don't know how to retreive the source.
+			next;
         }
 
         # We check that we correctly detected the file type of the source we
         # got, this is mandatory to know what to do with it.
         if (!OSCAR::Utils::is_a_valid_string ($file_type)) {
-            return "ERROR: Impossible to get the file type";
+            print "ERROR: [create_package] Impossible to get the file type from $filename\n";
+            push (@failed_comp, $c);
+            # Stop here: Don't know how to retreive the source.
+            next;
         }
+
         oscar_log_subsection "File type: $file_type (see OSCAR::Defs for ".
             "translation)";
 
         # We check the prereqs (including dependencies with other packages)
         if (OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c", $pkg_destdir)) {
-            carp "ERROR: Impossible to manage prereqs for the creation of ".
-                    "the binary package";
+            print "ERROR: [create_package:prepare_prereqs] Impossible to manage prereqs for the creation of the binary package\n";
             push (@failed_comp, $c);
+			# Stop here: failed to install dependancies, so build will fail.
+			next;
         }
 
         # We make sure we pre-process the downloaded files.
         if ($file_type eq OSCAR::Defs::TARBALL()) {
-            my $pre_cmd = "cd $packaging_dir/$c; tar xzf $filename";
-            if (system($pre_cmd)) {
-                carp "ERROR: Impossible to execute $pre_cmd";
+            if (extract_file("$filename","$packaging_dir/$c")) {
+                print "ERROR: [create_package: extract_file] Impossible to extract $filename\n";
                 push (@failed_comp, $c);
+				# Stop here: no extraction means no build.
+				next;
             }
         }
 
         # We check if a precommand specified by the user needs to be executed
-        $cmd = "cd $packaging_dir/$c; ";
+        $cmd = "cd $packaging_dir/$c;";
         my $precmd = $$precmds{$c};
         if (defined ($precmd)) {
             my $build_cmd = $cmd . $precmd;
+            $build_cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
             if (system ($build_cmd)) {
-                carp "ERROR: Impossible to execute $cmd";
+                print "ERROR: [create_package: run precmd] Impossible to execute $cmd\n";
                 push (@failed_comp, $c);
+				# Precommand failed, package won't build.
+				next;
             }
         }
 
-        # We compile the package
+        # We compile the package (if not built by prepare_prereqs)
         if ($os->{pkg} eq "deb") {
             if ($file_type eq OSCAR::Defs::SVN() 
                 || $file_type eq OSCAR::Defs::TARBALL()) {
@@ -360,6 +397,8 @@ sub create_package ($$) {
             } else {
                 oscar_log_subsection "ERROR: Unknown type ($file_type)";
                 push (@failed_comp, $c);
+				# Don't know how to build this kind of file under debian.
+				next;
             }
         } elsif ($os->{pkg} eq "rpm") {
             if ($file_type eq OSCAR::Defs::SVN()
@@ -374,18 +413,27 @@ sub create_package ($$) {
                 }
             } elsif ($file_type eq OSCAR::Defs::SRPM()) {
                 $cmd .= "rpmbuild --rebuild $filename";
+                $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
             } else {
                 oscar_log_subsection "ERROR: Unknown type ($file_type)";
                 push (@failed_comp, $c);
+				# Don't know how to build this kind of file under rpm based distro.
+				next;
             }
         } else {
-            die "ERROR: Unknown binary package format ($os->{pkg})";
+            print "ERROR: [create_package] Unknown binary package format ($os->{pkg})\n";
+			push (@failed_comp, $c);
+            # Don't know how to build this kind of file under rpm based distro.
+            next;
         }
+
         OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
+
         if (system ($cmd)) {
-            OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
-                "build $c ($cmd)";
+            print "[ERROR] Impossible to build $c ($cmd)\n";
             push (@failed_comp, $c);
+			# Package build failed
+			next;
         }else{
             my $timestamp = localtime;
             my $str = "$category:$c";
@@ -401,13 +449,15 @@ sub create_package ($$) {
     }
 
     $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
+    $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
+    $cmd .= " --verbose" if ($verbose);
     if (system($cmd)) {
-        carp "ERROR: Impossible to execute $cmd";
-        push (@failed_comp, $cmd);
+        carp "ERROR: Impossible to execute $cmd" if ($debug);
+        # OL: Push this command to failed_comp??????
+        # push (@failed_comp, $cmd);
     }
 
-    oscar_log_section "[INFO] Generated binary packages ".
-        "are in $pkg_destdir";
+	print "[INFO] $pkg_destdir repo index has been updated\n";
 
     return @failed_comp;
 }
@@ -467,9 +517,8 @@ sub do_packaging ($$) {
 
     @main_failed_comp = create_package ($cpts, $precmds);
     if (scalar (@main_failed_comp) > 0) {
-        carp "Errors occured during the OSCAR packaging.\n".
-             "OSCAR components that failed are: ";
-        OSCAR::Utils::print_array (@main_failed_comp);
+        print "ERROR: Errors occured during the OSCAR packaging.\n".
+              "       OSCAR components that failed are: @main_failed_comp\n";
         # exit 1;
     }
 
@@ -477,9 +526,8 @@ sub do_packaging ($$) {
     if (-f $opkg_conffile) {
         @meta_failed_comp = create_opkgs_metapkg ($ocpts);
         if (scalar (@meta_failed_comp) > 0) {
-            carp "Errors occured during the creation of meta-packages for ".
-                "available OPKGs";
-            OSCAR::Utils::print_array (@meta_failed_comp);
+            print "ERROR: Errors occured during the creation of meta-packages\n".
+                  "       for available OPKGs: @meta_failed_comp\n";
             # exit 1;
         }
     } else {
@@ -490,9 +538,8 @@ sub do_packaging ($$) {
 	# Build failed comp sumup.
 	@failed_comp = ( @main_failed_comp , @meta_failed_comp );
 	if (scalar (@failed_comp) > 0) {
-            carp "Errors occured during the creation of packages for ".
-                "available OPKGs";
-            OSCAR::Utils::print_array (@failed_comp);
+            print "ERROR: Errors occured during the creation of packages\n".
+                  "       Failed build are: @failed_comp\n";
 	}
     return @failed_comp;
 }
@@ -510,13 +557,13 @@ sub package_core ($$$) {
     if ($core && OSCAR::Utils::is_element_in_array($core, @$releases) ) {
         $config_file = "$conffilepath/core_stable_$core.cfg";
         $opkg_conffile = "$conffilepath/core_opkgs_$core.cfg";
-        oscar_log_subsection "Packaging stable OSCAR core ($core)";
+        oscar_log_section "Packaging stable OSCAR core ($core)";
     }
 
     if ($core && !OSCAR::Utils::is_element_in_array($core, @$releases)) {
         $config_file = "$conffilepath/core_unstable.cfg";
         $opkg_conffile = "$conffilepath/core_opkgs_unstable.cfg";
-        oscar_log_subsection "Packaging unstable OSCAR core";
+        oscar_log_section "Packaging unstable OSCAR core";
     }
 
     @failed_comp = do_packaging ($config_file, $opkg_conffile);
@@ -537,13 +584,13 @@ sub package_included ($$$) {
     if ($included && OSCAR::Utils::is_element_in_array($included, @$releases)) {
         $config_file = "$conffilepath/included_stable_$included.cfg";
         $opkg_conffile = "$conffilepath/included_opkgs_$included.cfg";
-        oscar_log_subsection "Packaging stable included OPKGs ($included)";
+        oscar_log_section "Packaging stable included OPKGs ($included)";
     }
 
     if ($included && !OSCAR::Utils::is_element_in_array($included, @$releases)) {
         $config_file = "$conffilepath/included_unstable.cfg";
         $opkg_conffile = "$conffilepath/included_opkgs_unstable.cfg";
-        oscar_log_subsection "Packaging unstable included OPKGs";
+        oscar_log_section "Packaging unstable included OPKGs";
     }
 
     @failed_comp = do_packaging ($config_file, $opkg_conffile);

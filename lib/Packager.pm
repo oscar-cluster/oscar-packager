@@ -52,7 +52,8 @@ use OSCAR::Utils;
             prepare_prereqs
             );
 
-my $verbose = 1;
+our $verbose=0;
+our $debug=0;
 our $packaging_dir = "/tmp/oscar-packager";
 
 ############################################################################
@@ -444,6 +445,7 @@ sub create_binary ($$$$$$) {
             # prepare to get the build option for rpm.
             my $s = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
             $cmd = "$binaries_path/build_rpms --only-rpm $download_dir/$source_file $s";
+            $cmd .= " --verbose" if $verbose;
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             if (!$test) {
                 if (system($cmd)) {
@@ -589,6 +591,7 @@ sub build_if_needed ($$$$) {
 ################################################################################
 sub install_requires {
     my ($requires) = @_;
+    my $return_code=0;
 
     OSCAR::Logger::oscar_log_subsection ("Installing requirements");
 
@@ -628,7 +631,8 @@ sub install_requires {
         $cmd .= " --verbose" if $verbose;
         OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
         if (system($cmd)) {
-            print "Warning: failed to install requires: ".join(" ",@reqs)."\n";
+            print "ERROR: Failed to install requires: ".join(" ",@reqs)."\n";
+            $return_code=-1;
         }
         # TODO: update that for both RPM and Debian
 #         local *CMD;
@@ -644,9 +648,12 @@ sub install_requires {
         close CMD;
         undef %before;
     }
-
-    OSCAR::Logger::oscar_log_subsection ("Requirements installed");
-    return 0;
+	if ($return_code != 0) {
+		return $return_code;
+    } else {
+        OSCAR::Logger::oscar_log_subsection ("[INFO] --> Requirements installed");
+        return 0;
+   }
 }
 
 
@@ -718,6 +725,7 @@ sub package_opkg ($$) {
         die "ERROR: Impossible to parse the build file";
     }
 
+    # FIXME: OL: need if $verbose and apropriate message.
     OSCAR::Utils::print_array (@config);
 
     # main build routine
@@ -781,7 +789,7 @@ sub prepare_prereqs ($$) {
     if( -f $run_script ){
         my $pkg_destdir=main::get_pkg_dest();
 		$run_script="cd $dir; LC_ALL=C PKGDEST=$pkg_destdir $run_script";
-        print "Executing: $run_script\n";
+        print "Executing: $run_script\n" if $verbose;
         if (system ($run_script)) {
             carp "ERROR: Impossible to execute $cmd";
             return -1;
