@@ -439,12 +439,19 @@ sub create_binary ($$$$$$) {
         $source_type = OSCAR::Defs::TARBALL();
     }
 
+    # We take the config value from the <package_name>.cfg file
+    my $config_data = OSCAR::ConfigFile::get_value ("$config_file",
+                                                    undef,
+                                                    "config");
+    chomp($config_data);
+
     my $cmd;
     if ($os->{pkg} eq "rpm") {
         if ($source_type eq OSCAR::Defs::SRPM()) {
             # prepare to get the build option for rpm.
             my $s = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
             $cmd = "$binaries_path/build_rpms --only-rpm $download_dir/$source_file $s";
+			$ENV{'RPMBUILDOPTS'} = $config_data if (defined ($config_data));
             $cmd .= " --verbose" if $verbose;
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             if (!$test) {
@@ -453,6 +460,7 @@ sub create_binary ($$$$$$) {
                     return -1;
                 } 
             }
+			$ENV{'RPMBUILDOPTS'} = "";
 			# Resulting rpms are stored in the current directory.
             $cmd = "mv ./*$name*.rpm $output";
             print "Executing: $cmd\n";
