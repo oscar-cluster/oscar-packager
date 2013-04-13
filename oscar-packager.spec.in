@@ -12,6 +12,7 @@ BuildRoot:      %{_localstatedir}/tmp/%{name}-root
 BuildArch:      noarch
 AutoReqProv: 	no
 Requires:       wget, oscar-base-lib > 6.1.2r9859, rpm-build, subversion
+Requires:	packman, opkgc
 
 %description
 Set of scripts and Perl modules for the automatic packaging of the OSCAR.
@@ -30,6 +31,9 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Fri Apr 12 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.47
+- New beta version (see changelog)
+
 * Tue Apr 09 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.46
 - New beta version (see changelog)
 
