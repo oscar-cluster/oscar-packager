@@ -255,8 +255,9 @@ sub prepare_rpm_env ($$$$$) {
             carp "ERROR: Couldn't create $dest: $@";
             return 1;
         }
-        chdir("$dest");
     }
+	# We move to this directory. This avoids to stay in destdir and try mv ./* to .
+    chdir("$dest");
 
     my $opt = $data{opt};
     if ($sel eq "common") {
@@ -331,7 +332,9 @@ sub create_binary ($$$$$$) {
     # We can sure the directory were we save downloads is ready
     # TODO: We should be able to specify that via a config file.
     my $download_dir = "/var/lib/oscar-packager/downloads";
-    my $build_dir = "/var/lib/oscar-packager/build";
+#    my $build_dir = "/var/lib/oscar-packager/build";
+	# Use $basedir = $packaging_dir/$name as $build_dir. ($pacjaging_dir = /tmp/oscar-packager)
+    my $build_dir = "$basedir";
 
     my $binaries_path = OSCAR::ConfigFile::get_value ("/etc/oscar/oscar.conf",
                                                       undef,
@@ -359,14 +362,18 @@ sub create_binary ($$$$$$) {
             # If the config file does not exist, we do not want to quit the program
             # but just proceed the build process with the given spec file.
 
-            my $spec_file = "$packaging_dir/$name.spec";
+			# packaging_dir = /tmp/oscar-packager
+			# spec files is in /tmp/oscar-packager/$name/rpm/$name.spec
+			# or in /tmp/oscar-packager/$name/$name.spec
+            my $spec_file = "$basedir/$name.spec";
             if (! -f $spec_file) {
-                $spec_file = "$packaging_dir/rpm/$name.spec";
+                $spec_file = "$basedir/rpm/$name.spec";
             } 
             my $cmd = "rpmbuild -bb $spec_file";
 
 			# Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
-			my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
+			# and chdir to $packaging_dir/$name.
+			my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $packaging_dir/$name);
 			$cmd .= $rpmbuild_options;
 
             if (system ($cmd)) {
@@ -438,7 +445,6 @@ sub create_binary ($$$$$$) {
     }else{
         $source_type = OSCAR::Defs::TARBALL();
     }
-
     # We take the config value from the <package_name>.cfg file
     my $config_data = OSCAR::ConfigFile::get_value ("$config_file",
                                                     undef,
@@ -447,12 +453,12 @@ sub create_binary ($$$$$$) {
 
     my $cmd;
     if ($os->{pkg} eq "rpm") {
+        # Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
+        my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $basedir);
         if ($source_type eq OSCAR::Defs::SRPM()) {
-            # prepare to get the build option for rpm.
-            my $s = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
-            $cmd = "$binaries_path/build_rpms --only-rpm $download_dir/$source_file $s";
-			$ENV{'RPMBUILDOPTS'} = $config_data if (defined ($config_data));
+            $cmd = "$binaries_path/build_rpms --only-rpm $download_dir/$source_file $rpmbuild_options";
             $cmd .= " --verbose" if $verbose;
+            $ENV{'RPMBUILDOPTS'} = $config_data if (defined ($config_data));
             OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             if (!$test) {
                 if (system($cmd)) {
@@ -460,8 +466,8 @@ sub create_binary ($$$$$$) {
                     return -1;
                 } 
             }
-			$ENV{'RPMBUILDOPTS'} = "";
-			# Resulting rpms are stored in the current directory.
+            $ENV{'RPMBUILDOPTS'} = "";
+			# Resulting rpms are stored in the current directory.($build_dir)
             $cmd = "mv ./*$name*.rpm $output";
             print "Executing: $cmd\n";
             if (system ($cmd)) {
@@ -478,12 +484,9 @@ sub create_binary ($$$$$$) {
                         return -1);
             }
 
-            # We try to execute rpmbuild using the spec file
-            chdir($packaging_dir);
-
             # We try to copy the rpm additional sources that are in ./rpm/$name/ if any.
-            if ( -d "./rpm/$name/" ) {
-                opendir( DIR, "./rpm/$name/" ) || die "Fail to opendir ./rpm/$name : $!\n";
+            if ( -d "$basedir/rpm/$name/" ) {
+                opendir( DIR, "$basedir/rpm/$name/" ) || die "Fail to opendir $basedir/rpm/$name : $!\n";
                 my @elmts = grep !/(?:^\.$)|(?:^\.\.$)/, readdir DIR;
                 closedir DIR; 
                 foreach ( @elmts ) {
@@ -491,9 +494,9 @@ sub create_binary ($$$$$$) {
                 }
             }
 
-            my $spec_file = "./$name.spec";
+            my $spec_file = "$basedir/$name.spec";
             if (! -f $spec_file) {
-                $spec_file = "./rpm/$name.spec";
+                $spec_file = "$basedir/rpm/$name.spec";
             } 
             $cmd = "rpmbuild -bb $spec_file ";
 			# Specify the target. old rpms were unable to build both architecture.
@@ -506,8 +509,6 @@ sub create_binary ($$$$$$) {
 			# Line below useless for the moment:
 			# $cmd .= " --target noarch " if ("$sel" eq "common");
 
-			# Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
-			my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, "/tmp");
 			$cmd .= $rpmbuild_options;
 
             if (system ($cmd)) {
@@ -527,6 +528,8 @@ sub create_binary ($$$$$$) {
 
             # We untar the tarball and try to execute "make deb" against the 
             # source code
+			# OL: FIXME: we should use the extract file cmd. and chandir to the extracted tarball.
+			# The line below does nothing. (superseeded by the make deb using the Makefile in $basedir(svn)
             $cmd = "cd $download_dir; tar xzf $source_file";
             if (system $cmd) {
                 carp "ERROR: Impossible to execute $cmd";
