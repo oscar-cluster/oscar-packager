@@ -144,8 +144,8 @@ sub create_opkgs_metapkg ($) {
         # Check to see if the package is already built or not
         # If not, go ahead. Otherwise, move on to the next
         elsif(is_built($c, $category) and !$force){
-	    	#OSCAR::Logger::oscar_log_subsection "The package ($c) is already built.";
-	    	print "[INFO] --> The packages (opkg-$c opkg-$c-client opkg-$c-server) are already built.\n";
+            #OSCAR::Logger::oscar_log_subsection "The package ($c) is already built.";
+            print "[INFO] --> The packages (opkg-$c opkg-$c-client opkg-$c-server) are already built.\n";
             next;
         }
 
@@ -161,26 +161,26 @@ sub create_opkgs_metapkg ($) {
             if (system $cmd) {
                 carp "ERROR: Impossible to execute $cmd";
                 push (@failed_comp, $c);
-				# Failed to retreive the source... next and avoid marking the package as built.
-				next;
+                # Failed to retreive the source... next and avoid marking the package as built.
+                next;
             }
         } else {
             carp "ERROR: Unknown method to access source ($method)";
             push (@failed_comp, $c);
-			# Don't know how to retreive the source. next and avoid marking the package as built.
-			next;
+            # Don't know how to retreive the source. next and avoid marking the package as built.
+            next;
         }
 
         # We compile
         require OSCAR::PackagePath;
         my $distro_id = OSCAR::PackagePath::get_distro ();
         if (!OSCAR::Utils::is_a_valid_string ($distro_id)) {
-			# FIXME: should return an array of failed comp
+            # FIXME: should return an array of failed comp
             return "ERROR: Impossible to get the distro ID";
         }
         my $compat_id = OSCAR::PackagePath::get_compat_distro ($distro_id);
         if (!OSCAR::Utils::is_a_valid_string ($compat_id)) {
-			# FIXME: should return an array of failed comp
+            # FIXME: should return an array of failed comp
             return "ERROR: Impossible to detect the compat distro ($distro_id)";
         }
         my ($compat_dist, @trash) = split ("-", $compat_id);
@@ -192,8 +192,8 @@ sub create_opkgs_metapkg ($) {
             OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
                 "build opkg-$c ($cmd)";
             push (@failed_comp, "opkg-$c");
-			# Failed to build the package, go to next
-			next;
+            # Failed to build the package, go to next
+            next;
         }else{
             my $timestamp = localtime;
             my $str = "$category:$c";
@@ -208,7 +208,7 @@ sub create_opkgs_metapkg ($) {
         }
         # once the opkg is built, remove its source tarball.
         system("rm -f $pkg_destdir/opkg-$c-*.tar.gz");
-		# FIXME: The above command fails for opkg-oscarv-1.0.tar.gz and opkg-ssi-oscar-2.1.1.tar.gz
+        # FIXME: The above command fails for opkg-oscarv-1.0.tar.gz and opkg-ssi-oscar-2.1.1.tar.gz
     }
 
     $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
@@ -219,7 +219,7 @@ sub create_opkgs_metapkg ($) {
         #push (@failed_comp, $cmd);
     }
 
-	print "[INFO] $pkg_destdir repo index has been updated\n";
+    print "[INFO] $pkg_destdir repo index has been updated\n";
 
     return @failed_comp
 }
@@ -267,7 +267,7 @@ sub create_package ($$) {
     #
     $pkg_destdir = get_pkg_dest ();
     if (!defined $pkg_destdir) {
-		# FIXME: should return an array of errors, not a string.
+        # FIXME: should return an array of errors, not a string.
         return "ERROR: Impossible to get the destination for packages";
     }
 
@@ -279,7 +279,7 @@ sub create_package ($$) {
     my $os = OSCAR::OCA::OS_Detect::open();
     if (!defined $os) {
         carp "ERROR: Impossible to detect the binary package format";
-		# FIXME: should return an array of errors, not a string.
+        # FIXME: should return an array of errors, not a string.
         return "OS not detected";
     }
 
@@ -298,8 +298,8 @@ sub create_package ($$) {
         # Check to see if the package is already built or not
         # If not, go ahead. Otherwise, move on to the next
         elsif(is_built($c, $category) and !$force){
-	    #OSCAR::Logger::oscar_log_subsection "The package ($c) is already built.";
-	        print "[INFO] --> The package ($c) is already built.\n";
+        #OSCAR::Logger::oscar_log_subsection "The package ($c) is already built.";
+            print "[INFO] --> The package ($c) is already built.\n";
             next;
         }
 
@@ -317,8 +317,8 @@ sub create_package ($$) {
             if (system $cmd) {
                 print "ERROR:[create_package] Failed to execute $cmd\n";
                 push (@failed_comp, $c);
-				# No source: stop here. Go to next package.
-				next;
+                # No source: stop here. Go to next package.
+                next;
             }
         } elsif ($method eq "wget") {
             require OSCAR::Defs;
@@ -327,19 +327,19 @@ sub create_package ($$) {
             if (!OSCAR::Utils::is_a_valid_string ($filename)) {
                 print "ERROR: [create_package] mpossible to get file name ($filename) from url $url\n";
                 push (@failed_comp, $c);
-				# No source: stop here. Go to next package.
-				next;
+                # No source: stop here. Go to next package.
+                next;
             }
-			# FIXME: Need to propagate $verbose to OSCAR::FileUtils::verbose...
-			# FIXME: Need to check the return code: in cas download fails.
+            # FIXME: Need to propagate $verbose to OSCAR::FileUtils::verbose...
+            # FIXME: Need to check the return code: in cas download fails.
             OSCAR::FileUtils::download_file ($url, "$dest", "wget",
                 OSCAR::Defs::OVERWRITE());
             $file_type = OSCAR::FileUtils::file_type ("$dest/$filename");
         } else {
             print "ERROR: [create_package] Unknown method to access source ($method)\n";
             push (@failed_comp, $c);
-			# Stop here: Don't know how to retreive the source.
-			next;
+            # Stop here: Don't know how to retreive the source.
+            next;
         }
 
         # We check that we correctly detected the file type of the source we
@@ -358,8 +358,8 @@ sub create_package ($$) {
         if (OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c", $pkg_destdir)) {
             print "ERROR: [create_package:prepare_prereqs] Impossible to manage prereqs for the creation of the binary package\n";
             push (@failed_comp, $c);
-			# Stop here: failed to install dependancies, so build will fail.
-			next;
+            # Stop here: failed to install dependancies, so build will fail.
+            next;
         }
 
         # We make sure we pre-process the downloaded files.
@@ -367,8 +367,8 @@ sub create_package ($$) {
             if (extract_file("$packaging_dir/$c/$filename","$packaging_dir/$c")) {
                 print "ERROR: [create_package: extract_file] Impossible to extract $filename\n";
                 push (@failed_comp, $c);
-				# Stop here: no extraction means no build.
-				next;
+                # Stop here: no extraction means no build.
+                next;
             }
         }
 
@@ -381,8 +381,8 @@ sub create_package ($$) {
             if (system ($build_cmd)) {
                 print "ERROR: [create_package: run precmd] Impossible to execute $cmd\n";
                 push (@failed_comp, $c);
-				# Precommand failed, package won't build.
-				next;
+                # Precommand failed, package won't build.
+                next;
             }
         }
 
@@ -397,8 +397,8 @@ sub create_package ($$) {
             } else {
                 oscar_log_subsection "ERROR: Unknown type ($file_type)";
                 push (@failed_comp, $c);
-				# Don't know how to build this kind of file under debian.
-				next;
+                # Don't know how to build this kind of file under debian.
+                next;
             }
         } elsif ($os->{pkg} eq "rpm") {
             if ($file_type eq OSCAR::Defs::SVN()
@@ -406,7 +406,7 @@ sub create_package ($$) {
                 if (-f "$packaging_dir/$c/Makefile") {
                     $cmd .= "make rpm PKGDEST=$pkg_destdir";
                     # Get the sourcedir (varies on distro)
-					# OL: this is useless, Makefiles now  uses rpm --eval '%_sourcedir' 
+                    # OL: this is useless, Makefiles now  uses rpm --eval '%_sourcedir' 
                     my $src_dir=`rpm --eval '%{_sourcedir}'`;
                     $cmd .= " SOURCEDIR=".$src_dir;
                     $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
@@ -417,12 +417,12 @@ sub create_package ($$) {
             } else {
                 oscar_log_subsection "ERROR: Unknown type ($file_type)";
                 push (@failed_comp, $c);
-				# Don't know how to build this kind of file under rpm based distro.
-				next;
+                # Don't know how to build this kind of file under rpm based distro.
+                next;
             }
         } else {
             print "ERROR: [create_package] Unknown binary package format ($os->{pkg})\n";
-			push (@failed_comp, $c);
+            push (@failed_comp, $c);
             # Don't know how to build this kind of file under rpm based distro.
             next;
         }
@@ -432,8 +432,8 @@ sub create_package ($$) {
         if (system ($cmd)) {
             print "[ERROR] Impossible to build $c ($cmd)\n";
             push (@failed_comp, $c);
-			# Package build failed
-			next;
+            # Package build failed
+            next;
         }else{
             my $timestamp = localtime;
             my $str = "$category:$c";
@@ -457,7 +457,7 @@ sub create_package ($$) {
         # push (@failed_comp, $cmd);
     }
 
-	print "[INFO] $pkg_destdir repo index has been updated\n";
+    print "[INFO] $pkg_destdir repo index has been updated\n";
 
     return @failed_comp;
 }
@@ -491,8 +491,8 @@ sub parse_config($$){
 sub do_packaging ($$) {
     my ($config_file, $opkg_conffile) = @_;
     my @failed_comp = ();
-	my @main_failed_comp = ();
-	my @meta_failed_comp = ();
+    my @main_failed_comp = ();
+    my @meta_failed_comp = ();
 
     # We now create binary packages for each components.
     if (! -f $config_file) {
@@ -535,63 +535,43 @@ sub do_packaging ($$) {
             "($opkg_conffile)\n";
     }
 
-	# Build failed comp sumup.
-	@failed_comp = ( @main_failed_comp , @meta_failed_comp );
-	if (scalar (@failed_comp) > 0) {
+    # Build failed comp sumup.
+    @failed_comp = ( @main_failed_comp , @meta_failed_comp );
+    if (scalar (@failed_comp) > 0) {
             print "ERROR: Errors occured during the creation of packages\n".
                   "       Failed build are: @failed_comp\n";
-	}
+    }
     return @failed_comp;
 }
 
-sub package_core ($$$) {
-    my ($core, $releases, $conffilepath) = @_;
+# Generic routine to package $type=(core,included,...)
+# package_type:
+# version: either a version, or unstable or a package name
+# releases: table with supported releases
+# conffilepath: /etc/oscar/oscar-packager
+# type: possible values: core, included
+
+sub package_type($$$$) {
+    my ($version, $releases, $conffilepath,$type) = @_;
     my ($config_file, $opkg_conffile);
     my @failed_comp = ();
+    my $conf_file_ext="";
 
-    if (!defined $core) {
+    if (!defined $version) {
         return @failed_comp;
+        # FIXEME: We should return something non empty otherwise, ther will be no error
+        # reported. (this case should never happen).
     }
-    $opkgs = "$core:core";
+    $opkgs = "$version:$type";
 
-    if ($core && OSCAR::Utils::is_element_in_array($core, @$releases) ) {
-        $config_file = "$conffilepath/core_stable_$core.cfg";
-        $opkg_conffile = "$conffilepath/core_opkgs_$core.cfg";
-        oscar_log_section "Packaging stable OSCAR core ($core)";
+    if (!OSCAR::Utils::is_element_in_array($version, @$releases)) {
+        $version="unstable";
+    } else {
+        $conf_file_ext="_stable";
     }
-
-    if ($core && !OSCAR::Utils::is_element_in_array($core, @$releases)) {
-        $config_file = "$conffilepath/core_unstable.cfg";
-        $opkg_conffile = "$conffilepath/core_opkgs_unstable.cfg";
-        oscar_log_section "Packaging unstable OSCAR core";
-    }
-
-    @failed_comp = do_packaging ($config_file, $opkg_conffile);
-
-    return @failed_comp;
-}
-
-sub package_included ($$$) {
-    my ($included, $releases, $conffilepath) = @_;
-    my ($config_file, $opkg_conffile);
-    my @failed_comp = ();
-
-    if (!defined $included) {
-        return @failed_comp;
-    }
-    $opkgs = "$included:included";
-
-    if ($included && OSCAR::Utils::is_element_in_array($included, @$releases)) {
-        $config_file = "$conffilepath/included_stable_$included.cfg";
-        $opkg_conffile = "$conffilepath/included_opkgs_$included.cfg";
-        oscar_log_section "Packaging stable included OPKGs ($included)";
-    }
-
-    if ($included && !OSCAR::Utils::is_element_in_array($included, @$releases)) {
-        $config_file = "$conffilepath/included_unstable.cfg";
-        $opkg_conffile = "$conffilepath/included_opkgs_unstable.cfg";
-        oscar_log_section "Packaging unstable included OPKGs";
-    }
+    $config_file = "$conffilepath/$type".$conf_file_ext."_".$version.".cfg";
+    $opkg_conffile = "$conffilepath/$type"."_opkgs_".$version.".cfg";
+    oscar_log_section "Packaging OSCAR $type ($version)";
 
     @failed_comp = do_packaging ($config_file, $opkg_conffile);
 
@@ -635,19 +615,20 @@ if ($available_releases) {
     exit (0)
 }
 
-# Read the .oscar_pkg file
+# Read the .oscar_pkg file (packages that are already built)
 read_built_pkgs_file();
 
 oscar_log_section "OSCAR Packager Starting...";
 
+# $all, $core, $included contain the version to package
+# ???? or the name of the package to build ???.
 if ($all) {
     $core = $all;
     $included = $all;
 }
 
-
-my @core_failed_comp = package_core ($core, \@releases, $config_file_path);
-my @included_failed_comp = package_included ($included, \@releases, $config_file_path);
+my @core_failed_comp = package_type ($core, \@releases, $config_file_path, "core");
+my @included_failed_comp = package_type ($included, \@releases, $config_file_path, "included");
 
 oscar_log_section "OSCAR Packager compilation results:";
 my @all_failed_comp = ( @core_failed_comp , @included_failed_comp );
@@ -655,11 +636,11 @@ my @all_failed_comp = ( @core_failed_comp , @included_failed_comp );
 my $exit_code=0;
 
 if (scalar (@all_failed_comp) > 0) {
-	print "[WARNING] --> Packaging was not 100% successfull. Packages that fails to build are:\n";
-	OSCAR::Utils::print_array (@all_failed_comp);
-	$exit_code=1;
+    print "[WARNING] --> Packaging was not 100% successfull. Packages that fails to build are:\n";
+    OSCAR::Utils::print_array (@all_failed_comp);
+    $exit_code=1;
 } else {
-	print "[INFO] --> Packaging was 100% successfull!\n";
+    print "[INFO] --> Packaging was 100% successfull!\n";
 }
 
 # Before to exit, we restore the initial OSCAR_VERBOSE value

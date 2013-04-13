@@ -1,4 +1,10 @@
 1.1.0 (not yet released):
+- Mand package_core and package_included a single generic routine allowing to
+add more type like contribe for example.
+- don't tay in current working directory to build rpms. Rather move to
+  /tmp/oscar-packager/$name to avoid doing blind mv commands...
+- Add "option" field in config file (--define , --target x86_64,i686 ...)
+- Add missing Requires: packman, opkgc
 - Stop build package on error and skip to next one avoiding to wrongly report
 a success.
 - Output reworked a lot to ease reading and debug. $debug and $verbose
