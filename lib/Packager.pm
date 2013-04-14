@@ -373,7 +373,7 @@ sub create_binary ($$$$$$) {
 
 			# Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
 			# and chdir to $packaging_dir/$name.
-			my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $packaging_dir/$name);
+			my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $basedir);
 			$cmd .= $rpmbuild_options;
 
             if (system ($cmd)) {
@@ -467,7 +467,7 @@ sub create_binary ($$$$$$) {
                 } 
             }
             $ENV{'RPMBUILDOPTS'} = "";
-			# Resulting rpms are stored in the current directory.($build_dir)
+			# Resulting rpms are stored in the current directory.($basedir)
             $cmd = "mv ./*$name*.rpm $output";
             print "Executing: $cmd\n";
             if (system ($cmd)) {
