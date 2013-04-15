@@ -277,11 +277,35 @@ sub prepare_rpm_env ($$$$$) {
     return $opt;
 }
 
+# This is a helper subroutine to move the built deb files to the 
+# given output directory
+#
+# $fromdir: the dir were the deb have been generated (usually /tmp/oscar-packager/$name).
+# $output: the destination (usualily the repo /tftpboot/oscar/<distroid>)
+# $sel: either "common" or "dist"
+#
+# Return: -1 if error, 0 else.
+sub move_debfiles($$$) {
+    my ($fromdir, $output, $sel) = @_;
+    if ( -d "$fromdir" ) {
+        opendir( DIR, "$fromdir" ) || die "Fail to opendir $fromdir : $!\n";
+        my @elmts = grep /(?:^\.deb$)/, readdir DIR;
+        closedir DIR; 
+        foreach ( @elmts ) {
+            File::Copy::copy ( "$fromdir/$_" , $output)
+        }
+    }
+}
+
 # This is a helper subroutine to move the built rpm files to the 
 # given output directory
 #
+# $spec: the spec file used to generate the rpms.
+# $output: the destination (usualily the repo /tftpboot/oscar/<distroid>)
+# $sel: either "common" or "dist"
+#
 # Return: -1 if error, 0 else.
-sub move_binaryfiles($$$) {
+sub move_rpmfiles($$$) {
     my ($spec, $output, $sel) = @_;
     my @rpms;
     chomp(my $rpmdir = `rpm --eval %{_rpmdir}`);
@@ -381,7 +405,7 @@ sub create_binary ($$$$$$) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
             }
-            move_binaryfiles($spec_file, $output, $sel);
+            move_rpmfiles($spec_file, $output, $sel);
             return 0;
         }
         if($os->{pkg} eq "deb"){
@@ -527,7 +551,7 @@ sub create_binary ($$$$$$) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
             }
-            move_binaryfiles($spec_file, $output, $sel);
+            move_rpmfiles($spec_file, $output, $sel);
         } else {
             # On RPM distro, we support only SRPM or TARBALL.
             # FIXME: We should try "make rpm" here.
