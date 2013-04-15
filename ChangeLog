@@ -1,4 +1,8 @@
 1.1.0 (not yet released):
+- Now debian build without Makefile is supported: if package.cfg has a tarball and:
+  - it contains a debian/control file
+  - or the source (from /etc/oscar/oscar-packager/*.cfg contains a debian/control file
+- Now debian use extract_files, so archives can be .tar.bz2 or .tgz or .tar.xz now.
 - Mand package_core and package_included a single generic routine allowing to
 add more type like contribe for example.
 - don't tay in current working directory to build rpms. Rather move to

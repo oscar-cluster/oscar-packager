@@ -33,6 +33,7 @@ BEGIN {
 
 use strict;
 use Carp;
+use Switch;
 use vars qw($VERSION @EXPORT);
 use base qw(Exporter);
 use Cwd;
@@ -256,7 +257,7 @@ sub prepare_rpm_env ($$$$$) {
             return 1;
         }
     }
-	# We move to this directory. This avoids to stay in destdir and try mv ./* to .
+    # We move to this directory. This avoids to stay in destdir and try mv ./* to .
     chdir("$dest");
 
     my $opt = $data{opt};
@@ -282,41 +283,41 @@ sub prepare_rpm_env ($$$$$) {
 # Return: -1 if error, 0 else.
 sub move_binaryfiles($$$) {
     my ($spec, $output, $sel) = @_;
-	my @rpms;
+    my @rpms;
     chomp(my $rpmdir = `rpm --eval %{_rpmdir}`);
-	my $query_spec_cmd = "rpmspec -q";
+    my $query_spec_cmd = "rpmspec -q";
 
-	# rpmspec is the replacement of rpm -q --specfile. Fallback to old method
-	# if rpmspec not yet available.
-	$query_spec_cmd = "rpm -q --specfile " if ( ! -x '/usr/bin/rpmspec') ;
+    # rpmspec is the replacement of rpm -q --specfile. Fallback to old method
+    # if rpmspec not yet available.
+    $query_spec_cmd = "rpm -q --specfile " if ( ! -x '/usr/bin/rpmspec') ;
 
-	# Specify the target otherwize we won't find what we are looking for.
-	# (building noarch part of the rpm, but trying to copy the default arch nbinaries)
-	my $target = "";
-	if ("$sel" eq "common") {
-	    $target = "--target noarch";
-	    $target = "--define '%_target_cpu noarch'" if ($query_spec_cmd =~ /--specfile/) ; 
-	}
-	# Warning, do not move the %{arch} out of the rpmspec query (e.g. in the above rpmdir computation
-	# Otherwize it will evalutate to the host binary architecture while here, it'll evaluate to the
-	# BuildArch in the spec file (if not specified it is host binary arch, but it can be noarch)
-	@rpms = `$query_spec_cmd $spec $target --qf "$rpmdir/%{arch}/%{name}-%{version}-%{release}.%{arch}.rpm\n"`;
-	my $cmd;
+    # Specify the target otherwize we won't find what we are looking for.
+    # (building noarch part of the rpm, but trying to copy the default arch nbinaries)
+    my $target = "";
+    if ("$sel" eq "common") {
+        $target = "--target noarch";
+        $target = "--define '%_target_cpu noarch'" if ($query_spec_cmd =~ /--specfile/) ; 
+    }
+    # Warning, do not move the %{arch} out of the rpmspec query (e.g. in the above rpmdir computation
+    # Otherwize it will evalutate to the host binary architecture while here, it'll evaluate to the
+    # BuildArch in the spec file (if not specified it is host binary arch, but it can be noarch)
+    @rpms = `$query_spec_cmd $spec $target --qf "$rpmdir/%{arch}/%{name}-%{version}-%{release}.%{arch}.rpm\n"`;
+    my $cmd;
     foreach my $rpm (@rpms) {
-		chomp($rpm);
-		# We need to test the existance of the file to be moved.
-		# rpmspec -q --target noarch pkg.spec will often note produce the main package
-		# which is often a binary_arch package.
-		if ( -f $rpm ) {
-			$cmd = "mv -f $rpm $output";
-			print "Moving " . File::Basename::basename ($rpm) . " to " . $output . "\n";
-			OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
-			if (system ($cmd)) {
-				carp "ERROR: Impossible to execute $cmd";
-				return -1;
-			}
-		}
-	}
+        chomp($rpm);
+        # We need to test the existance of the file to be moved.
+        # rpmspec -q --target noarch pkg.spec will often note produce the main package
+        # which is often a binary_arch package.
+        if ( -f $rpm ) {
+            $cmd = "mv -f $rpm $output";
+            print "Moving " . File::Basename::basename ($rpm) . " to " . $output . "\n";
+            OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
+            if (system ($cmd)) {
+                carp "ERROR: Impossible to execute $cmd";
+                return -1;
+            }
+        }
+    }
     return 0;
 }
 
@@ -333,7 +334,7 @@ sub create_binary ($$$$$$) {
     # TODO: We should be able to specify that via a config file.
     my $download_dir = "/var/lib/oscar-packager/downloads";
 #    my $build_dir = "/var/lib/oscar-packager/build";
-	# Use $basedir = $packaging_dir/$name as $build_dir. ($pacjaging_dir = /tmp/oscar-packager)
+    # Use $basedir = $packaging_dir/$name as $build_dir. ($pacjaging_dir = /tmp/oscar-packager)
     my $build_dir = "$basedir";
 
     my $binaries_path = OSCAR::ConfigFile::get_value ("/etc/oscar/oscar.conf",
@@ -362,19 +363,19 @@ sub create_binary ($$$$$$) {
             # If the config file does not exist, we do not want to quit the program
             # but just proceed the build process with the given spec file.
 
-			# packaging_dir = /tmp/oscar-packager
-			# spec files is in /tmp/oscar-packager/$name/rpm/$name.spec
-			# or in /tmp/oscar-packager/$name/$name.spec
+            # packaging_dir = /tmp/oscar-packager
+            # spec files is in /tmp/oscar-packager/$name/rpm/$name.spec
+            # or in /tmp/oscar-packager/$name/$name.spec
             my $spec_file = "$basedir/$name.spec";
             if (! -f $spec_file) {
                 $spec_file = "$basedir/rpm/$name.spec";
             } 
             my $cmd = "rpmbuild -bb $spec_file";
 
-			# Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
-			# and chdir to $packaging_dir/$name.
-			my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $basedir);
-			$cmd .= $rpmbuild_options;
+            # Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
+            # and chdir to $packaging_dir/$name.
+            my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $basedir);
+            $cmd .= $rpmbuild_options;
 
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
@@ -384,12 +385,23 @@ sub create_binary ($$$$$$) {
             return 0;
         }
         if($os->{pkg} eq "deb"){
+            # FIXME: We could try make deb.(in case a build_rpm with arball url is in a deb: rule).
             carp "ERROR: There is no corresponding config file: $config_file";
             return -1;
         }
     }
-    # SOURCES dir for rpm
-    chomp(my $src_dir = `/bin/rpm --eval %{_sourcedir}`);
+
+    # SOURCES dir for package.(used for SRC_DIR precommand variable)
+    my $src_dir="";
+    switch ( $os->{pkg} ) {
+        case "rpm" { chomp($src_dir = `/bin/rpm --eval %{_sourcedir}`) }
+        case "deb" {
+                       $src_dir="$basedir/debian";
+                       mkdir $src_dir if (! -d $src_dir);
+                   }
+        # If not building rpm or deb, we work in basedir.
+        else { $src_dir="$basedir" }
+    }
 
     # Run any precommand defind in a package's config file.
     OSCAR::Logger::oscar_log_subsection "Running the preconfiured commands for $name...";
@@ -432,17 +444,17 @@ sub create_binary ($$$$$$) {
         # @src_files = split(",", $tmp_file);
         # my $src_file = $src_files[0];
 
-		@src_files = glob($source);
-		# We assume that the main archive is the 1st source file.
-		$source_file = File::Basename::basename ($src_files[0]);
+        @src_files = glob($source);
 
-        $source_type = 
-            OSCAR::FileUtils::file_type ("$download_dir/$source_file");
+        # We assume that the main archive is the 1st source file.
+        $source_file = File::Basename::basename ($src_files[0]);
+        $source_type = OSCAR::FileUtils::file_type ("$download_dir/$source_file");
+
         if (!defined $source_type) {
             carp "ERROR: Impossible to detect the source file format";
             return -1;
         }
-    }else{
+    } else {
         $source_type = OSCAR::Defs::TARBALL();
     }
     # We take the config value from the <package_name>.cfg file
@@ -467,7 +479,7 @@ sub create_binary ($$$$$$) {
                 } 
             }
             $ENV{'RPMBUILDOPTS'} = "";
-			# Resulting rpms are stored in the current directory.($basedir)
+            # Resulting rpms are stored in the current directory.($basedir)
             $cmd = "mv ./*$name*.rpm $output";
             print "Executing: $cmd\n";
             if (system ($cmd)) {
@@ -477,7 +489,7 @@ sub create_binary ($$$$$$) {
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
             # We copy the tarball in %{_sourcedir}
             foreach my $sf (@src_files){
-				$sf = File::Basename::basename ($sf);
+                $sf = File::Basename::basename ($sf);
                 $sf = "$download_dir/$sf";
                 File::Copy::copy ($sf, $src_dir) 
                     or (carp "ERROR: impossible to copy the file ($sf, $src_dir)",
@@ -499,17 +511,17 @@ sub create_binary ($$$$$$) {
                 $spec_file = "$basedir/rpm/$name.spec";
             } 
             $cmd = "rpmbuild -bb $spec_file ";
-			# Specify the target. old rpms were unable to build both architecture.
-			# For those rpms, we use the common: tag. Thus 2 build occures:
-			# one with --target=noarch and one without (arch build).
-			# On modern rpms, both arch and noarch sub rpms will be generated
-			# When rpmbuild is called without --target. For those modern rpms, there
-			# is no common: section in build.cfg.
-			#
-			# Line below useless for the moment:
-			# $cmd .= " --target noarch " if ("$sel" eq "common");
+            # Specify the target. old rpms were unable to build both architecture.
+            # For those rpms, we use the common: tag. Thus 2 build occures:
+            # one with --target=noarch and one without (arch build).
+            # On modern rpms, both arch and noarch sub rpms will be generated
+            # When rpmbuild is called without --target. For those modern rpms, there
+            # is no common: section in build.cfg.
+            #
+            # Line below useless for the moment:
+            # $cmd .= " --target noarch " if ("$sel" eq "common");
 
-			$cmd .= $rpmbuild_options;
+            $cmd .= $rpmbuild_options;
 
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
@@ -517,30 +529,65 @@ sub create_binary ($$$$$$) {
             }
             move_binaryfiles($spec_file, $output, $sel);
         } else {
+            # On RPM distro, we support only SRPM or TARBALL.
+            # FIXME: We should try "make rpm" here.
             carp "ERROR: Unsupported file type for binary package creation ".
                  "($source_type)";
             return -1;
         }
     } elsif ($os->{pkg} eq "deb") {
         if ($source_type eq OSCAR::Defs::TARBALL()) {
-            # TODO: we should use the build_dir to untar the tarball and try
-            # to create the package.
 
-            # We untar the tarball and try to execute "make deb" against the 
-            # source code
-			# OL: FIXME: we should use the extract file cmd. and chandir to the extracted tarball.
-			# The line below does nothing. (superseeded by the make deb using the Makefile in $basedir(svn)
-            $cmd = "cd $download_dir; tar xzf $source_file";
-            if (system $cmd) {
-                carp "ERROR: Impossible to execute $cmd";
-                return -1;
+            # We extract the source_file and cd to basedir.
+            if (extract_file("$download_dir/$source_file","$basedir")) {
+                print "WARNING: [create_package: extract_file] Impossible to extract $source_file\nFalling back to make deb method.\n" if $verbose;
+                # Can't extract, we'll fall back to "make deb"
+            } else {
+
+                # OL FIXME: having extract file returning a list of new objects in $dest would be more reliable).
+                # Try to guess the name of the extracted directory.
+                my ($extracted_dir, $sourcepath, $suffix) = File::Basename::fileparse($source_file, qr/.tar.gz|.tar.bz2|.tgz|.tbz/);
+
+                if ( -d "$basedir/$extracted_dir/" ) {
+                    # Good guess.
+                    # 1st, we check if there is a debian/control file in the extracted archive.
+                    if ( -f "$basedir/$extracted_dir/debian/crontrol" ) {
+                        print "[INFO] Found debian/control in $source_file. I'll use this to build the package\n" if $verbose;
+                    } else {
+                        # 2nd, if no debian/control file, then we try to copy our debian directory if any in the extracted archive.
+                        # We try to copy the debian build material that is in ./debian if any.
+                        # FIXME: We should copy recursively filtering .svn stuffs using Xcopy
+                        if ( -d "$basedir/debian/" ) {
+                            opendir( DIR, "$basedir/debian/" ) || die "Fail to opendir $basedir/debian : $!\n";
+                            my @elmts = grep !/(?:^\.$)|(?:^\.\.$)|(?:.svn)/, readdir DIR;
+                            closedir DIR; 
+                            mkdir "$basedir/$extracted_dir/debian";
+                            foreach ( @elmts ) {
+                                File::Copy::copy ( "./debian/$_" , "$basedir/$extracted_dir/debian/")
+                            }
+                        }
+                    }
+                } else {
+                    print "[WARNING] no debian/control found in $source_file. I'll use the make deb method to build the package\n" if $verbose;
+                }
             }
-            $cmd = "make deb";
+
+            # if we have a debian/control file we try to build the package
+            if ( -f "$basedir/$extracted_dir/debian/crontrol" ) {
+                $cmd = "(cd $basedir/$extracted_dir; dpkg-buildpackage -b)";
+                print "[INFO] Building DEB package using dpkg-buildpackage -b\n" if $verbose;
+            } else {
+                # Else, if no debian/control file, then we try a make deb.
+                $cmd = "make deb";
+                print "[INFO] Building DEB package using make deb\n" if $verbose;
+            }
+            print "[DEBUG] About to run: $cmd\n" if $debug;
             if (system $cmd) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
             }
         } else {
+            # FIXME: We should try "make deb" here.
             carp "ERROR: Unsupported file type for binary package creation ".
                  "($source_type)";
             return -1;
@@ -632,12 +679,12 @@ sub install_requires {
 #         # remember bianry packages which were installed before
 #         my %before = map { $_ => 1 }
 #                     split("\n",`rpm -qa --qf '%{NAME}.%{ARCH}\n'`);
-	my $os = OSCAR::OCA::OS_Detect::open ();
-	if (!defined $os && ref($os) ne "HASH") {
+    my $os = OSCAR::OCA::OS_Detect::open ();
+    if (!defined $os && ref($os) ne "HASH") {
             carp "ERROR: Impossible to detect the local distro";
             return -1;
         }
-	my $distro_id = "$os->{distro}-$os->{distro_version}-$os->{arch}";
+    my $distro_id = "$os->{distro}-$os->{distro_version}-$os->{arch}";
         my $cmd = "/usr/bin/packman install ".join(" ",@install_stack)." --distro $distro_id";
         $cmd .= " --verbose" if $verbose;
         OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
@@ -659,8 +706,8 @@ sub install_requires {
         close CMD;
         undef %before;
     }
-	if ($return_code != 0) {
-		return $return_code;
+    if ($return_code != 0) {
+        return $return_code;
     } else {
         OSCAR::Logger::oscar_log_subsection ("[INFO] --> Requirements installed");
         return 0;
@@ -788,7 +835,7 @@ sub prepare_prereqs ($$) {
     my $cmd = "";
     my $run_script = "";
     if ($os->{pkg} eq "rpm") {
-	    $run_script = "$dir/build_rpm.sh";
+        $run_script = "$dir/build_rpm.sh";
         #$cmd = "mv $dir/*.rpm $output";
     } elsif ($os->{pkg} eq "deb") {
         $run_script = "$dir/build_deb.sh";
@@ -799,7 +846,7 @@ sub prepare_prereqs ($$) {
 
     if( -f $run_script ){
         my $pkg_destdir=main::get_pkg_dest();
-		$run_script="cd $dir; LC_ALL=C PKGDEST=$pkg_destdir $run_script";
+        $run_script="cd $dir; LC_ALL=C PKGDEST=$pkg_destdir $run_script";
         print "Executing: $run_script\n" if $verbose;
         if (system ($run_script)) {
             carp "ERROR: Impossible to execute $cmd";

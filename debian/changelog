@@ -1,5 +1,17 @@
-oscar-packager (1.1.0-0.1) UNRELEASED; urgency=low
+oscar-packager (1.1.0-0.50) quantal; urgency=low
+
+  * New beta version.
+
+ -- Olivier LAHAYE <ol222822@ubuntu>  Mon, 15 Apr 2013 18:09:10 -0700
+
+oscar-packager (1.1.0-0.49) quantal; urgency=low
+
+  * New beta version.
+
+ -- Olivier LAHAYE <ol222822@ubuntu>  Mon, 15 Apr 2013 09:10:09 -0700
+
+oscar-packager (1.1.0-0.1) quantal; urgency=low
 
   * Initial release.
 
- -- Olivier LAHAYE <olahaye74@ubuntu>  Fri, 22 Mar 2013 11:09:25 -0700
+ -- Olivier LAHAYE <ol222822@ubuntu>  Sun, 14 Apr 2013 07:45:28 -0700
