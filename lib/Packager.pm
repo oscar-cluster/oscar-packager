@@ -538,20 +538,19 @@ sub create_binary ($$$$$$) {
     } elsif ($os->{pkg} eq "deb") {
         if ($source_type eq OSCAR::Defs::TARBALL()) {
 
+            # OL FIXME: having extract file returning a list of new objects in $dest would be more reliable).
+            # Try to guess the name of the extracted directory.
+            my ($extracted_dir, $sourcepath, $suffix) = File::Basename::fileparse($source_file, qr/.tar.gz|.tar.bz2|.tgz|.tbz/);
+
             # We extract the source_file and cd to basedir.
             if (extract_file("$download_dir/$source_file","$basedir")) {
                 print "WARNING: [create_package: extract_file] Impossible to extract $source_file\nFalling back to make deb method.\n" if $verbose;
                 # Can't extract, we'll fall back to "make deb"
             } else {
-
-                # OL FIXME: having extract file returning a list of new objects in $dest would be more reliable).
-                # Try to guess the name of the extracted directory.
-                my ($extracted_dir, $sourcepath, $suffix) = File::Basename::fileparse($source_file, qr/.tar.gz|.tar.bz2|.tgz|.tbz/);
-
                 if ( -d "$basedir/$extracted_dir/" ) {
                     # Good guess.
                     # 1st, we check if there is a debian/control file in the extracted archive.
-                    if ( -f "$basedir/$extracted_dir/debian/crontrol" ) {
+                    if ( -f "$basedir/$extracted_dir/debian/control" ) {
                         print "[INFO] Found debian/control in $source_file. I'll use this to build the package\n" if $verbose;
                     } else {
                         # 2nd, if no debian/control file, then we try to copy our debian directory if any in the extracted archive.
@@ -563,7 +562,7 @@ sub create_binary ($$$$$$) {
                             closedir DIR; 
                             mkdir "$basedir/$extracted_dir/debian";
                             foreach ( @elmts ) {
-                                File::Copy::copy ( "./debian/$_" , "$basedir/$extracted_dir/debian/")
+                                File::Copy::copy ( "$basedir/debian/$_" , "$basedir/$extracted_dir/debian/")
                             }
                         }
                     }
@@ -573,7 +572,7 @@ sub create_binary ($$$$$$) {
             }
 
             # if we have a debian/control file we try to build the package
-            if ( -f "$basedir/$extracted_dir/debian/crontrol" ) {
+            if ( -f "$basedir/$extracted_dir/debian/control" ) {
                 $cmd = "(cd $basedir/$extracted_dir; dpkg-buildpackage -b)";
                 print "[INFO] Building DEB package using dpkg-buildpackage -b\n" if $verbose;
             } else {
