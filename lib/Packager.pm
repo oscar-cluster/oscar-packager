@@ -599,6 +599,7 @@ sub create_binary ($$$$$$) {
             # if we have a debian/control file we try to build the package
             if ( -f "$basedir/$extracted_dir/debian/control" ) {
                 $cmd = "cd $basedir/$extracted_dir; dpkg-buildpackage -b";
+		$cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
                 print "[INFO] Building DEB package using dpkg-buildpackage -b\n" if $verbose;
             } else {
                 # Else, if no debian/control file, then we try a make deb.
