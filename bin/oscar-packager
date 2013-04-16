@@ -185,8 +185,11 @@ sub create_opkgs_metapkg ($) {
         }
         my ($compat_dist, @trash) = split ("-", $compat_id);
         $cmd = "cd $packaging_dir/opkg-$c;";
-        $cmd .= "opkgc --dist $compat_dist --output $pkg_destdir";
-        $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
+        $cmd .= "opkgc ";
+        $cmd .= " -v" if $verbose;
+        $cmd .= " -v -v" if $debug;
+        $cmd .= " --dist $compat_dist --output $pkg_destdir";
+        $cmd .= " 1>/dev/null 2>/dev/null" if (!($debug|$verbose));
         OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
         if (system ($cmd)) {
             OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
