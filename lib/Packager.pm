@@ -289,9 +289,10 @@ sub move_debfiles($$$) {
     my ($fromdir, $output, $sel) = @_;
     if ( -d "$fromdir" ) {
         opendir( DIR, "$fromdir" ) || die "Fail to opendir $fromdir : $!\n";
-        my @elmts = grep /(?:^\.deb$)/, readdir DIR;
+        my @elmts = grep /.+\.deb$/, readdir DIR;
         closedir DIR; 
         foreach ( @elmts ) {
+            print "Moving " . File::Basename::basename ($_) . " to " . $output . "\n" if $verbose;
             File::Copy::copy ( "$fromdir/$_" , $output)
         }
     }
@@ -334,7 +335,7 @@ sub move_rpmfiles($$$) {
         # which is often a binary_arch package.
         if ( -f $rpm ) {
             $cmd = "mv -f $rpm $output";
-            print "Moving " . File::Basename::basename ($rpm) . " to " . $output . "\n";
+            print "Moving " . File::Basename::basename ($rpm) . " to " . $output . "\n" if $verbose;
             OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
@@ -597,7 +598,7 @@ sub create_binary ($$$$$$) {
 
             # if we have a debian/control file we try to build the package
             if ( -f "$basedir/$extracted_dir/debian/control" ) {
-                $cmd = "(cd $basedir/$extracted_dir; dpkg-buildpackage -b)";
+                $cmd = "cd $basedir/$extracted_dir; dpkg-buildpackage -b";
                 print "[INFO] Building DEB package using dpkg-buildpackage -b\n" if $verbose;
             } else {
                 # Else, if no debian/control file, then we try a make deb.
@@ -608,7 +609,13 @@ sub create_binary ($$$$$$) {
             if (system $cmd) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
+            } else {
+		# Build succeeded, avoid future build attempt (Make build from main)
+                system "touch $basedir/build.stamp";
             }
+
+            # Now, we need to move *.deb to dest.
+            move_debfiles($basedir, $output, $sel);
         } else {
             # FIXME: We should try "make deb" here.
             carp "ERROR: Unsupported file type for binary package creation ".
