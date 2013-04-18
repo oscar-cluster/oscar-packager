@@ -51,6 +51,7 @@ use OSCAR::Utils;
             available_releases
             package_opkg
             prepare_prereqs
+            run_build_and_move
             );
 
 our $verbose=0;
@@ -298,44 +299,60 @@ sub move_debfiles($$$) {
     }
 }
 
-# This is a helper subroutine to move the built rpm files to the 
-# given output directory
+# This is a helper subroutine to parse the build command (rpm or deb) output,
+# handle verbosity correctly and collect the packages generated if any.
 #
-# $spec: the spec file used to generate the rpms.
-# $output: the destination (usualily the repo /tftpboot/oscar/<distroid>)
-# $sel: either "common" or "dist"
+# input:
+# - $cmd: the command to run.
+# - $output: the place to move resulting packages.
 #
-# Return: -1 if error, 0 else.
-sub move_rpmfiles($$$) {
-    my ($spec, $output, $sel) = @_;
-    my @rpms;
-    chomp(my $rpmdir = `rpm --eval %{_rpmdir}`);
-    my $query_spec_cmd = "rpmspec -q";
+# output:
+# - 0 success
+# - -1 error
+sub run_build_and_move($$) {
+    my ($cmd,$output) = @_;
+    my @pkgs= ();
 
-    # rpmspec is the replacement of rpm -q --specfile. Fallback to old method
-    # if rpmspec not yet available.
-    $query_spec_cmd = "rpm -q --specfile " if ( ! -x '/usr/bin/rpmspec') ;
+    # Try to run the command and open the pipe.
+    $ENV{LC_ALL} = 'C';
+    unless (open(BUILD, "$cmd 2>&1 |")) {
+        print "ERROR: Failed to run build command: rc=$!.\n" if $verbose;
+        print "       Failed command was: $cmd\n" if $debug;
+		return -1;
+	}
 
-    # Specify the target otherwize we won't find what we are looking for.
-    # (building noarch part of the rpm, but trying to copy the default arch nbinaries)
-    my $target = "";
-    if ("$sel" eq "common") {
-        $target = "--target noarch";
-        $target = "--define '%_target_cpu noarch'" if ($query_spec_cmd =~ /--specfile/) ; 
+    # Parse the output.
+    my $output_line;
+    while(<BUILD>) {
+        $output_line=$_;
+        chomp($output_line);
+        if ($output_line =~ /Wrote: (.*\.rpm$)/) {
+            push(@pkgs, $1);
+        }
+        if ($output_line =~ /^dpkg-deb: building package .* in `(.*\.deb)'.$/) {
+           push(@pkgs, $1);
+        }
+        print "$output_line\n" if $debug;
     }
-    # Warning, do not move the %{arch} out of the rpmspec query (e.g. in the above rpmdir computation
-    # Otherwize it will evalutate to the host binary architecture while here, it'll evaluate to the
-    # BuildArch in the spec file (if not specified it is host binary arch, but it can be noarch)
-    @rpms = `$query_spec_cmd $spec $target --qf "$rpmdir/%{arch}/%{name}-%{version}-%{release}.%{arch}.rpm\n"`;
-    my $cmd;
-    foreach my $rpm (@rpms) {
-        chomp($rpm);
-        # We need to test the existance of the file to be moved.
-        # rpmspec -q --target noarch pkg.spec will often note produce the main package
-        # which is often a binary_arch package.
-        if ( -f $rpm ) {
-            $cmd = "mv -f $rpm $output";
-            print "Moving " . File::Basename::basename ($rpm) . " to " . $output . "\n" if $verbose;
+
+    # Close the pipe and check the return code.
+    unless (close (BUILD)) {
+        print "ERROR: Failed to build package: rc=$!.\n" if ($verbose);
+        print "       Failed command was: $cmd\n";
+        return -1;
+    }
+
+    # Now we move resulting packages to $output.
+    if (scalar(@pkgs) == 0) {
+        print "ERROR: No package have been generated\n";
+        print "Command that did produce nothing was: $cmd\n" if $debug;
+        return -1;
+    }
+    foreach my $pkg (@pkgs) {
+        chomp($pkg);
+        if ( -f $pkg ) {
+            $cmd = "mv -f $pkg $output";
+            print "Moving " . File::Basename::basename ($pkg) . " to " . $output . "\n" if $verbose;
             OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
             if (system ($cmd)) {
                 carp "ERROR: Impossible to execute $cmd";
@@ -343,7 +360,7 @@ sub move_rpmfiles($$$) {
             }
         }
     }
-    return 0;
+    return 0
 }
 
 # This routine effectively create binary packages, hiding the differences 
@@ -395,18 +412,18 @@ sub create_binary ($$$$$$) {
             if (! -f $spec_file) {
                 $spec_file = "$basedir/rpm/$name.spec";
             } 
-            my $cmd = "rpmbuild -bb $spec_file";
+            my $build_cmd = "rpmbuild -bb $spec_file";
 
             # Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
             # and chdir to $packaging_dir/$name.
             my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $basedir);
-            $cmd .= $rpmbuild_options;
+            $build_cmd .= $rpmbuild_options;
 
-            if (system ($cmd)) {
-                carp "ERROR: Impossible to execute $cmd";
+            if (run_build_and_move($build_cmd,$output)) {
+                print "ERROR: No rpms have been generated for package $name\n.";
+                print "       Failed command (produced nothing) was: $build_cmd\n" if ($debug);
                 return -1;
             }
-            move_rpmfiles($spec_file, $output, $sel);
             return 0;
         }
         if($os->{pkg} eq "deb"){
@@ -512,13 +529,22 @@ sub create_binary ($$$$$$) {
                 return -1;
             }
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
-            # We copy the tarball in %{_sourcedir}
+            my $build_cmd="rpmbuild";
+            # We copy the source files in %{_sourcedir} (and spec files in .)
             foreach my $sf (@src_files){
                 $sf = File::Basename::basename ($sf);
-                $sf = "$download_dir/$sf";
-                File::Copy::copy ($sf, $src_dir) 
-                    or (carp "ERROR: impossible to copy the file ($sf, $src_dir)",
-                        return -1);
+                # Check if it is a spec file
+                if ($sf =~ m/.*\.spec/) {
+                    # If yes, we copy the file in $basedir instead of $src_dir so it is found later.
+                    File::Copy::copy ("$download_dir/$sf", $basedir) 
+                        or (carp "ERROR: impossible to copy the file ($download_dir/$sf, $basedir)",
+                            return -1);
+                } else {
+                    # Not a spec file, copy the source in $src_dir.
+                    File::Copy::copy ("$download_dir/$sf", $src_dir) 
+                        or (carp "ERROR: impossible to copy the file ($download_dir/$sf, $src_dir)",
+                            return -1);
+                }
             }
 
             # We try to copy the rpm additional sources that are in ./rpm/$name/ if any.
@@ -531,11 +557,27 @@ sub create_binary ($$$$$$) {
                 }
             }
 
-            my $spec_file = "$basedir/$name.spec";
+            # $basedir/rpm/$name.spec (from /etc/oscar/oscar-packager/*.cfg) has priority over
+            # $basedir/$name.spec (from source in package.cfg or old svn config)
+            my $spec_file = "$basedir/rpm/$name.spec";
+            # We suppose that the specc file is provided from what has been downloaded from /etc/oscar/oscar-packager/*.cfg (often from svn)
             if (! -f $spec_file) {
-                $spec_file = "$basedir/rpm/$name.spec";
-            } 
-            $cmd = "rpmbuild -bb $spec_file ";
+                # If nothing is found, maybe it's downloaded from package.cfg source field, or from the above config file (old structure).
+                $spec_file = "$basedir/$name.spec";
+            }
+
+            if ( -f $spec_file ) {
+                # If we have a spec file (from @src_files or from ./rpm )
+                # build the rpm using this spec file.
+                print "[INFO] Building RPM package using provided spec file.\n" if $verbose;
+                $build_cmd .= " -bb $spec_file";
+            } else {
+                # No spec file (either in @src_files or from ./rpm )
+                # We try a tarbuild with the hope that there is a spec file inside the tarball.
+                print "[INFO] Building RPM package using spec file from tarball.\n" if $verbose;
+                $build_cmd .= " -tb $src_dir/$src_files[0]";
+            }
+
             # Specify the target. old rpms were unable to build both architecture.
             # For those rpms, we use the common: tag. Thus 2 build occures:
             # one with --target=noarch and one without (arch build).
@@ -544,15 +586,17 @@ sub create_binary ($$$$$$) {
             # is no common: section in build.cfg.
             #
             # Line below useless for the moment:
-            # $cmd .= " --target noarch " if ("$sel" eq "common");
+            # $build_cmd .= " --target noarch " if ("$sel" eq "common");
 
-            $cmd .= $rpmbuild_options;
+            $build_cmd .= $rpmbuild_options;
 
-            if (system ($cmd)) {
-                carp "ERROR: Impossible to execute $cmd";
+            $build_cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
+
+            if (run_build_and_move($build_cmd,$output)) {
+                print "ERROR: No rpms have been generated for package $name\n.";
+                print "       Failed command (produced nothing) was: $build_cmd\n" if ($debug);
                 return -1;
             }
-            move_rpmfiles($spec_file, $output, $sel);
         } else {
             # On RPM distro, we support only SRPM or TARBALL.
             # FIXME: We should try "make rpm" here.
@@ -599,7 +643,7 @@ sub create_binary ($$$$$$) {
             # if we have a debian/control file we try to build the package
             if ( -f "$basedir/$extracted_dir/debian/control" ) {
                 $cmd = "cd $basedir/$extracted_dir; dpkg-buildpackage -b";
-		$cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
+                $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
                 print "[INFO] Building DEB package using dpkg-buildpackage -b\n" if $verbose;
             } else {
                 # Else, if no debian/control file, then we try a make deb.
