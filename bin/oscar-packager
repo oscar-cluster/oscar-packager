@@ -60,6 +60,8 @@ $OSCAR::Packager::verbose = $verbose;
 $OSCAR::Packager::debug = $debug;
 
 sub pkgdir_cleanup () {
+    # Avoid being in $packagin_dir before removing it.
+    chdir('/tmp') or die "Can't chdir to /tmp :$!";
     if (-d $packaging_dir) {
         OSCAR::Logger::oscar_log_subsection "Removing $packaging_dir";
         File::Path::rmtree ($packaging_dir);

@@ -330,7 +330,7 @@ sub run_build_and_move($$) {
             push(@pkgs, $1);
         }
         if ($output_line =~ /^dpkg-deb: building package .* in `(.*\.deb)'.$/) {
-           push(@pkgs, $1);
+            push(@pkgs, $1);
         }
         print "$output_line\n" if $debug;
     }
@@ -345,7 +345,7 @@ sub run_build_and_move($$) {
     # Now we move resulting packages to $output.
     if (scalar(@pkgs) == 0) {
         print "ERROR: No package have been generated\n";
-        print "Command that did produce nothing was: $cmd\n" if $debug;
+        print "       Command that did produce nothing was: $cmd\n" if $debug;
         return -1;
     }
     foreach my $pkg (@pkgs) {
