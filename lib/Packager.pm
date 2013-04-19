@@ -372,12 +372,18 @@ sub create_binary ($$$$$$) {
 
     OSCAR::Logger::oscar_log_subsection ("Packaging $name");
 
-    # We can sure the directory were we save downloads is ready
-    # TODO: We should be able to specify that via a config file.
-    my $download_dir = "/var/lib/oscar-packager/downloads";
-#    my $build_dir = "/var/lib/oscar-packager/build";
-    # Use $basedir = $packaging_dir/$name as $build_dir. ($pacjaging_dir = /tmp/oscar-packager)
-    my $build_dir = "$basedir";
+    # Get, check or prepare the download dir.
+    my $download_dir = OSCAR::ConfigFile::get_value ("/etc/oscar/oscar.conf",
+                                                     undef,
+                                                     "PACKAGER_DOWNLOAD_PATH");
+    $download_dir = "/var/lib/oscar-packager/downloads"; if (undef $download_dir);
+    if (! -d $download_dir) {
+        eval { File::Path::mkpath ($download_dir) };
+        if ($@) {
+            carp "ERROR: Couldn't create $download_dir: $@";
+            return -1;
+        }
+    }    my $build_dir = "$basedir";
 
     my $binaries_path = OSCAR::ConfigFile::get_value ("/etc/oscar/oscar.conf",
                                                       undef,
@@ -387,14 +393,6 @@ sub create_binary ($$$$$$) {
     if (!defined $os) {
         carp "ERROR: Impossible to detect the binary package format";
         return -1;
-    }
-
-    if (! -d $download_dir) {
-        eval { File::Path::mkpath ($download_dir) };
-        if ($@) {
-            carp "ERROR: Couldn't create $download_dir: $@";
-            return -1;
-        }
     }
 
     # Is the config file for the package creation here or not?
