@@ -318,8 +318,8 @@ sub run_build_and_move($$) {
     unless (open(BUILD, "$cmd 2>&1 |")) {
         print "ERROR: Failed to run build command: rc=$!.\n" if $verbose;
         print "       Failed command was: $cmd\n" if $debug;
-		return -1;
-	}
+        return -1;
+    }
 
     # Parse the output.
     my $output_line;
@@ -372,11 +372,13 @@ sub create_binary ($$$$$$) {
 
     OSCAR::Logger::oscar_log_subsection ("Packaging $name");
 
+    #
     # Get, check or prepare the download dir.
+    #
     my $download_dir = OSCAR::ConfigFile::get_value ("/etc/oscar/oscar.conf",
                                                      undef,
                                                      "PACKAGER_DOWNLOAD_PATH");
-    $download_dir = "/var/lib/oscar-packager/downloads"; if (undef $download_dir);
+    $download_dir = "/var/lib/oscar-packager/downloads" if (! defined $download_dir);
     if (! -d $download_dir) {
         eval { File::Path::mkpath ($download_dir) };
         if ($@) {
@@ -388,7 +390,9 @@ sub create_binary ($$$$$$) {
     my $binaries_path = OSCAR::ConfigFile::get_value ("/etc/oscar/oscar.conf",
                                                       undef,
                                                       "OSCAR_SCRIPTS_PATH");
-
+    #
+    # Get the OS informations
+    #
     my $os = OSCAR::OCA::OS_Detect::open();
     if (!defined $os) {
         carp "ERROR: Impossible to detect the binary package format";
@@ -425,12 +429,13 @@ sub create_binary ($$$$$$) {
             return 0;
         }
         if($os->{pkg} eq "deb"){
-            # FIXME: We could try make deb.(in case a build_rpm with arball url is in a deb: rule).
+            # FIXME: We could try make deb.(in case a build_rpm with tarball url is in a deb: rule).
             carp "ERROR: There is no corresponding config file: $config_file";
             return -1;
         }
     }
-
+    # ELSE: we have a config file for package.
+ 
     # SOURCES dir for package.(used for SRC_DIR precommand variable)
     my $src_dir="";
     switch ( $os->{pkg} ) {
@@ -441,21 +446,6 @@ sub create_binary ($$$$$$) {
                    }
         # If not building rpm or deb, we work in basedir.
         else { $src_dir="$basedir" }
-    }
-
-    # Run any precommand defind in a package's config file.
-    OSCAR::Logger::oscar_log_subsection "Running the preconfiured commands for $name...";
-    my $pre_cmd = OSCAR::ConfigFile::get_value ("$config_file",
-                                                 undef,
-                                                 "precommand");
-    if($pre_cmd){
-        $pre_cmd =~ s/BASE_DIR/$basedir/g;
-        $pre_cmd =~ s/PKG_NAME/$name/g;
-        $pre_cmd =~ s/SRC_DIR/$src_dir/g;
-        if (system($pre_cmd)) {
-             carp "ERROR: Impossible to execute $pre_cmd";
-             return -1;
-        }
     }
 
     # Now, since we can access the config file, we parse it and download the
@@ -478,12 +468,6 @@ sub create_binary ($$$$$$) {
             return -1
         }
  
-        # $source_file = File::Basename::basename ($source);
-        # my $tmp_file = $source_file;
-        # $tmp_file =~ s/[\{\}]//g;
-        # @src_files = split(",", $tmp_file);
-        # my $src_file = $src_files[0];
-
         @src_files = glob($source);
 
         # We assume that the main archive is the 1st source file.
@@ -495,19 +479,40 @@ sub create_binary ($$$$$$) {
             return -1;
         }
     } else {
+        # If no source is defined in the package config file, then we assume it is a tarball
         $source_type = OSCAR::Defs::TARBALL();
     }
-    # We take the config value from the <package_name>.cfg file
+
+    # RPMBUILDOPTS: We take the config value from the <package_name>.cfg file
     my $config_data = OSCAR::ConfigFile::get_value ("$config_file",
                                                     undef,
                                                     "config");
     chomp($config_data);
+
+    # Prepare any precommand definded in a package's config file.
+    # OSCAR::Logger::oscar_log_subsection "Running the preconfiigured commands for $name...";
+    my $pre_cmd = OSCAR::ConfigFile::get_value ("$config_file",
+                                                 undef,
+                                                 "precommand");
+    if($pre_cmd){
+        $pre_cmd =~ s/BASE_DIR/$basedir/g;
+        $pre_cmd =~ s/PKG_NAME/$name/g;
+        $pre_cmd =~ s/SRC_DIR/$src_dir/g;
+    }
 
     my $cmd;
     if ($os->{pkg} eq "rpm") {
         # Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
         my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $basedir);
         if ($source_type eq OSCAR::Defs::SRPM()) {
+            print "[INFO] Building RPM from SRPM ".$source_file."\n" if $verbose;
+            # In this situation, the build environment is ready, we can run the precommand if any.
+            if($pre_cmd){
+                if (system($pre_cmd)) {
+                     print "ERROR: Build RPM from SRPM: Impossible to execute precommand: $pre_cmd\n";
+                     return -1;
+                }
+            }
             $cmd = "$binaries_path/build_rpms --only-rpm $download_dir/$source_file $rpmbuild_options";
             $cmd .= " --verbose" if $verbose;
             $ENV{'RPMBUILDOPTS'} = $config_data if (defined ($config_data));
@@ -527,6 +532,7 @@ sub create_binary ($$$$$$) {
                 return -1;
             }
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
+            print "[INFO] Building RPM from TARBALL ".$source_file."\n" if $verbose;
             my $build_cmd="rpmbuild";
             # We copy the source files in %{_sourcedir} (and spec files in .)
             foreach my $sf (@src_files){
@@ -534,13 +540,15 @@ sub create_binary ($$$$$$) {
                 # Check if it is a spec file
                 if ($sf =~ m/.*\.spec/) {
                     # If yes, we copy the file in $basedir instead of $src_dir so it is found later.
-                    File::Copy::copy ("$download_dir/$sf", $basedir) 
-                        or (carp "ERROR: impossible to copy the file ($download_dir/$sf, $basedir)",
+                    # File::Copy::copy ("$download_dir/$sf", $basedir) 
+                    symlink ("$download_dir/$sf", "$basedir/$sf") 
+                        or (carp "ERROR: impossible to link the file ($download_dir/$sf, $basedir)",
                             return -1);
                 } else {
                     # Not a spec file, copy the source in $src_dir.
-                    File::Copy::copy ("$download_dir/$sf", $src_dir) 
-                        or (carp "ERROR: impossible to copy the file ($download_dir/$sf, $src_dir)",
+                    # File::Copy::copy ("$download_dir/$sf", $src_dir) 
+                    symlink ("$download_dir/$sf", "$src_dir/$sf") 
+                        or (carp "ERROR: impossible to link the file ($download_dir/$sf, $src_dir)",
                             return -1);
                 }
             }
@@ -555,6 +563,16 @@ sub create_binary ($$$$$$) {
                 }
             }
 
+            #
+            # The build material is in place. In this situation, we can run the precommand if any.
+            #
+            if($pre_cmd){
+                if (system($pre_cmd)) {
+                     print "ERROR: Build RPM from TARBALL: Impossible to execute precommand: $pre_cmd\n";
+                     return -1;
+                }
+            }
+ 
             # $basedir/rpm/$name.spec (from /etc/oscar/oscar-packager/*.cfg) has priority over
             # $basedir/$name.spec (from source in package.cfg or old svn config)
             my $spec_file = "$basedir/rpm/$name.spec";
@@ -598,12 +616,25 @@ sub create_binary ($$$$$$) {
         } else {
             # On RPM distro, we support only SRPM or TARBALL.
             # FIXME: We should try "make rpm" here.
-            carp "ERROR: Unsupported file type for binary package creation ".
+            print "[INFO] Building RPM from unsupported file type ".$source_file."\n" if $verbose;
+
+            #
+            # The build material is in place. In this situation, we can run the precommand if any.
+            #
+            if($pre_cmd){
+                if (system($pre_cmd)) {
+                     print "ERROR: Build RPM from Unsupported source type: Impossible to execute precommand: $pre_cmd\n";
+                     return -1;
+                }
+            }
+             carp "ERROR: Unsupported file type for binary package creation ".
                  "($source_type)";
             return -1;
         }
     } elsif ($os->{pkg} eq "deb") {
         if ($source_type eq OSCAR::Defs::TARBALL()) {
+
+            print "[INFO] Building DEB from TARBALL ".$source_file."\n" if $verbose;
 
             # OL FIXME: having extract file returning a list of new objects in $dest would be more reliable).
             # Try to guess the name of the extracted directory.
@@ -616,11 +647,11 @@ sub create_binary ($$$$$$) {
             } else {
                 if ( -d "$basedir/$extracted_dir/" ) {
                     # Good guess.
-                    # 1st, we check if there is a debian/control file in the extracted archive.
-                    if ( -f "$basedir/$extracted_dir/debian/control" ) {
-                        print "[INFO] Found debian/control in $source_file. I'll use this to build the package\n" if $verbose;
+                    # 1st, we check if there is a debian/ dir in the extracted archive.
+                    if ( -d "$basedir/$extracted_dir/debian" ) {
+                        print "[INFO] Found debian/ directory in $source_file. I'll use this to build the package\n" if $verbose;
                     } else {
-                        # 2nd, if no debian/control file, then we try to copy our debian directory if any in the extracted archive.
+                        # 2nd, if no debian/ dir, then we try to copy our debian directory if any in the extracted archive.
                         # We try to copy the debian build material that is in ./debian if any.
                         # FIXME: We should copy recursively filtering .svn stuffs using Xcopy
                         if ( -d "$basedir/debian/" ) {
@@ -634,15 +665,24 @@ sub create_binary ($$$$$$) {
                         }
                     }
                 } else {
-                    print "[WARNING] no debian/control found in $source_file. I'll use the make deb method to build the package\n" if $verbose;
+                    print "[WARNING] no debian/ directory found in $source_file. I'll use the make deb method to build the package\n" if $verbose;
                 }
             }
 
+            #
+            # The build material is in place. In this situation, we can run the precommand if any.
+            #
+            if($pre_cmd){
+                if (system($pre_cmd)) {
+                     print "ERROR: Build DEB from TARBALL: Impossible to execute precommand: $pre_cmd\n";
+                     return -1;
+                }
+            }
             # if we have a debian/control file we try to build the package
             if ( -f "$basedir/$extracted_dir/debian/control" ) {
-                $cmd = "cd $basedir/$extracted_dir; dpkg-buildpackage -b";
+                $cmd = "cd $basedir/$extracted_dir; dpkg-buildpackage -b -uc -us";
                 $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
-                print "[INFO] Building DEB package using dpkg-buildpackage -b\n" if $verbose;
+                print "[INFO] Building DEB package using dpkg-buildpackage -b -uc -us\n" if $verbose;
             } else {
                 # Else, if no debian/control file, then we try a make deb.
                 $cmd = "make deb";
@@ -653,17 +693,31 @@ sub create_binary ($$$$$$) {
                 carp "ERROR: Impossible to execute $cmd";
                 return -1;
             } else {
-		# Build succeeded, avoid future build attempt (Make build from main)
+                # Build succeeded, avoid future build attempt (Make build from main)
                 system "touch $basedir/build.stamp";
             }
 
             # Now, we need to move *.deb to dest.
             move_debfiles($basedir, $output, $sel);
         } else {
-            # FIXME: We should try "make deb" here.
-            carp "ERROR: Unsupported file type for binary package creation ".
-                 "($source_type)";
-            return -1;
+            # For unsupported source type (srpm, svn), we try the precommand. It could do the trick.....
+            print "[INFO] Building DEB from unsupported archive type (".$source_type.") from ".$source_file."\n" if $verbose;
+            #
+            # The build material is in place. In this situation, we can run the precommand if any.
+            #
+            if($pre_cmd){
+                if (system($pre_cmd)) {
+                     print "ERROR: Build DEB from unsupported archive type: Impossible to execute precommand: $pre_cmd\n";
+                     return -1;
+                }
+            } else {
+                # No precommand and unsupported source type means nothing is built.
+                carp "ERROR: Unsupported file type for binary package creation ".
+                     "($source_type)";
+                return -1;
+            }
+            print "[WARNING] Build for unsupported source type was attempted. The precommand was successful Though\n" .
+                  "          Please check that the build occured\n";
         }
     } else {
         carp "ERROR: $os->{pkg} is not currently supported";
