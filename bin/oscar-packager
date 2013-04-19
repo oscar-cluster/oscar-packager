@@ -336,7 +336,7 @@ sub create_package ($$) {
                 next;
             }
             # FIXME: Need to propagate $verbose to OSCAR::FileUtils::verbose...
-            # FIXME: Need to check the return code: in cas download fails.
+            # FIXME: Need to check the return code: in case download fails.
             OSCAR::FileUtils::download_file ($url, "$dest", "wget",
                 OSCAR::Defs::OVERWRITE());
             $file_type = OSCAR::FileUtils::file_type ("$dest/$filename");
@@ -360,6 +360,7 @@ sub create_package ($$) {
             "translation)";
 
         # We check the prereqs (including dependencies with other packages)
+        # If build.cfg is present, the build is also triggered here.
         if (OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c", $pkg_destdir)) {
             print "ERROR: [create_package:prepare_prereqs] Impossible to manage prereqs for the creation of the binary package\n";
             push (@failed_comp, $c);
