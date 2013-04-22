@@ -614,8 +614,6 @@ sub create_binary ($$$$$$) {
 
             $build_cmd .= $rpmbuild_options;
 
-            $build_cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
-
             if (run_build_and_move($build_cmd,$output)) {
                 print "ERROR: No rpms have been generated for package $name\n.";
                 print "       Failed command (produced nothing) was: $build_cmd\n" if ($debug);

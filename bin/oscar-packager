@@ -29,12 +29,12 @@ use File::Path;
 use Carp;
 use warnings "all";
 
-my ($all, $core, $included, $force, $opkgs, $verbose, $debug, $available_releases, $unsigned);
+my ($all, $core, $included, $force, $opkgs, $debug, $available_releases, $unsigned);
+our $verbose=0;
 
 $opkgs = 1;
 use vars qw ($pkg_destdir);
 
-our $verbose=0;
 
 # Getopt::Long::Configure("pass_through");
 GetOptions(
