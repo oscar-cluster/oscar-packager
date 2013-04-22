@@ -541,12 +541,20 @@ sub create_binary ($$$$$$) {
                 if ($sf =~ m/.*\.spec/) {
                     # If yes, we copy the file in $basedir instead of $src_dir so it is found later.
                     # File::Copy::copy ("$download_dir/$sf", $basedir) 
+                    if ( -e "$basedir/$sf" ) {
+                        # If the file exists, remove it to prevent symlink to fail
+                        unlink "$basedir/$sf";
+                    }
                     symlink ("$download_dir/$sf", "$basedir/$sf") 
                         or (carp "ERROR: impossible to link the file ($download_dir/$sf, $basedir)",
                             return -1);
                 } else {
                     # Not a spec file, copy the source in $src_dir.
                     # File::Copy::copy ("$download_dir/$sf", $src_dir) 
+                    if ( -e "$src_dir/$sf" ) {
+                        # If the file exists, remove it to prevent symlink to fail
+                        unlink "$src_dir/$sf";
+                    }
                     symlink ("$download_dir/$sf", "$src_dir/$sf") 
                         or (carp "ERROR: impossible to link the file ($download_dir/$sf, $src_dir)",
                             return -1);
