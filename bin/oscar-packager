@@ -55,9 +55,21 @@ my $config_file_path = "/etc/oscar/oscar-packager";
 my $built_pkgs = "$config_file_path/.oscar_pkgs";
 my %already_built = ();
 
+# Now we correctly set OSCAR_VERBOSE to be sure we get all the output we want
+my $initial_verbose = $ENV{OSCAR_VERBOSE};
+if ($verbose) {
+    $ENV{OSCAR_VERBOSE} = 5;
+    $verbose=5;
+}
+if ($debug) {
+    $ENV{OSCAR_VERBOSE} = 10;
+    $verbose=10;
+}
+
 # Propagate the verbose and debug switches.
 $OSCAR::Packager::verbose = $verbose;
 $OSCAR::Packager::debug = $debug;
+$OSCAR::FileUtils::verbose = $verbose;
 
 sub pkgdir_cleanup () {
     # Avoid being in $packagin_dir before removing it.
@@ -587,15 +599,6 @@ sub package_type($$$$) {
 my $config_file; # This variable points to the config file for the components
                  # we try to package.
 my $opkg_conffile; # This variable points to the associated OPKGs.
-
-# Now we correctly set OSCAR_VERBOSE to be sure we get all the output we want
-my $initial_verbose = $ENV{OSCAR_VERBOSE};
-if ($verbose) {
-    $ENV{OSCAR_VERBOSE} = 5;
-}
-if ($debug) {
-    $ENV{OSCAR_VERBOSE} = 10;
-}
 
 $ENV{UNSIGNED_OSCAR_PKG} =1 if ($unsigned);
 
