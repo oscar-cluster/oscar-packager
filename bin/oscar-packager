@@ -34,6 +34,8 @@ my ($all, $core, $included, $force, $opkgs, $verbose, $debug, $available_release
 $opkgs = 1;
 use vars qw ($pkg_destdir);
 
+our $verbose=0;
+
 # Getopt::Long::Configure("pass_through");
 GetOptions(
         "all=s"                             => \$all,
@@ -203,7 +205,7 @@ sub create_opkgs_metapkg ($) {
         $cmd .= " -v" if $verbose;
         $cmd .= " -v -v" if $debug;
         $cmd .= " --dist $compat_dist --output $pkg_destdir";
-        $cmd .= " 1>/dev/null 2>/dev/null" if (!($debug|$verbose));
+        $cmd .= " 1>/dev/null 2>/dev/null" if ($verbose == 0);
         OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
         if (system ($cmd)) {
             OSCAR::Logger::oscar_log_subsection "[WARNING] Impossible to ".
