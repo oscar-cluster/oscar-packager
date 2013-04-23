@@ -424,7 +424,7 @@ sub create_binary ($$$$$$) {
             # Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
             # and chdir to $packaging_dir/$name.
             my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $basedir);
-            $build_cmd .= $rpmbuild_options;
+            $build_cmd .= " $rpmbuild_options";
 
             if (run_build_and_move($build_cmd,$output)) {
                 print "ERROR: No rpms have been generated for package $name.\n";
@@ -618,7 +618,7 @@ sub create_binary ($$$$$$) {
             # Line below useless for the moment:
             # $build_cmd .= " --target noarch " if ("$sel" eq "common");
 
-            $build_cmd .= $rpmbuild_options;
+            $build_cmd .= " $rpmbuild_options";
 
             if (run_build_and_move($build_cmd,$output)) {
                 print "ERROR: No rpms have been generated for package $name\n.";
