@@ -1,23 +1,26 @@
 1.1.0 (not yet released):
-- Now debian build without Makefile is supported: if package.cfg has a tarball and:
+- [dikim] More intelligent building process for the oscar packages and opkgs:
+  - Added support for make_rpm.sh and make_deb.sh build script
+  - Added support for precommand in <package>.cfg.
+  - Add "option" field in config file (--define , --target x86_64,i686 ...)
+- [ol] Now debian build without Makefile is supported: if package.cfg has a tarball and:
   - it contains a debian/control file
   - or the source (from /etc/oscar/oscar-packager/*.cfg contains a debian/control file
-- Now debian use extract_files, so archives can be .tar.bz2 or .tgz or .tar.xz now.
-- Mand package_core and package_included a single generic routine allowing to
-add more type like contribe for example.
-- don't tay in current working directory to build rpms. Rather move to
+- [ol] Now debian use extract_files, so archives can be .tar.bz2 or .tgz or .tar.xz now.
+- [ol] Made package_core and package_included a single generic routine allowing to
+  add more type like contrib for example.
+- [ol] don't stay in current working directory to build rpms. Rather move to
   /tmp/oscar-packager/$name to avoid doing blind mv commands...
-- Add "option" field in config file (--define , --target x86_64,i686 ...)
-- Add missing Requires: packman, opkgc
-- Stop build package on error and skip to next one avoiding to wrongly report
-a success.
-- Output reworked a lot to ease reading and debug. $debug and $verbose
+- [ol] Add missing Requires: packman, opkgc
+- [ol] Stop build package on error and skip to next one avoiding to wrongly report
+  a success.
+- [ol] Output reworked a lot to ease reading and debug. $debug and $verbose
   forwarded to Packager.pm
-- Don't stop build if one package in main(core) or main(included) fails.
+- [ol] Don't stop build if one package in main(core) or main(included) fails.
   Still build opkgs.
-- Correct reports of all errors at the end of the build.
-- Setup PKGDEST env variable before calling build_{deb,rpm}.sh script.
-- Added:
+- [ol] Correct reports of all errors at the end of the build.
+- [ol] Setup PKGDEST env variable before calling build_{deb,rpm}.sh script.
+- [ol] Added:
   - systemimager + bittorent + flamethrower
   - systemconfigurator
   - systeminstaller-oscar
@@ -31,31 +34,32 @@ a success.
   - oscar-nat
   - system-update
   - jobmonarch + pyPgSQL + pbs_python
-  - kernel_picker
-- Fixed semf destruct when building itself: would remove
-/tmp/oscar-packager/oscar-packager (self) when preparing build environment.
-Now we use normal archive name with version in it.
-- Take into account that the rpm command is either located in /bin or
-/usr/bin.
-- Fixed Packager.pm to support {} in source allowing for more than one source
-to be downloaded. The main source must be the 1st one.
-example:
-http://url_to_donwload_site/{main_archive.tar.gz,main_archive/addon.png, ...}
-- Fixed Packager.pm building package without build options specified in the
-builc.cfg file.
-- Fixed oscar-packager to build only once the package instead of 5 times in
-case of an src.rpm in the package.cfg accompanied with a Makefile in the svn
-tree.
-- Moved all %SOURCE and %PATCHES files that were in opkg/<name>/trunk/rpm
-into a subdirectory so it's easy to copy only files specific to a spec file
-It also permit to have a file with the same name E.g. README in 2 different
-subpackage like drmaa-python and toque-oscar.
-- Optimized build_package and Packager.pm by using "rpmspec -q" or
-"rpm -q --specfile" to retreve the exact filenames of all binary rpms that
-will be generated. This avoid to blindly copy old versions of the same rpm
-in the repository.
-- Upgraded c3 to 5.1.3 (new version) [ol]
-- Add the possibility to build only one specific package [dikim]
+  - kernel-picker
+- [ol] Fixed semf destruct when building itself: would remove
+  /tmp/oscar-packager/oscar-packager (self) when preparing build environment.
+  Now we use normal archive name with version in it.
+- [ol] Take into account that the rpm command is either located in /bin or /usr/bin.
+- [dikim & ol] Fixed Packager.pm to support {} in source allowing for more than one source
+  to be downloaded. The main source must be the 1st one.
+  example:
+  http://url_to_donwload_site/{main_archive.tar.gz,main_archive/addon.png, ...}
+- [ol] Fixed Packager.pm building package without build options specified in the
+  builc.cfg file.
+- [ol] Fixed oscar-packager to build only once the package instead of 5 times in
+  case of an src.rpm in the package.cfg accompanied with a Makefile in the svn
+  tree.
+- [ol] Moved all %SOURCE and %PATCHES files that were in opkg/<name>/trunk/rpm
+  into a subdirectory so it's easy to copy only files specific to a spec file
+  It also permit to have a file with the same name E.g. README in 2 different
+  subpackage like drmaa-python and toque-oscar.
+- [ol] Parsed the build command output to retreave exactly what was build. this
+  avoids to blindly move packages or unwanted files into the dest dir (repos)
+- [ol] Upgraded:
+  - torque to 4.1.4
+  - c3 to 5.1.3
+  - ganglia to 3.5.7 (web) and 3.5.0 (daemons)
+  - jobmonarch to 1.0 (final release)
+- [dikim] Add the possibility to build only one specific package
   e.g. "oscar-packager --included openmpi unstable" will only build opnempi.
 
 1.0.1:

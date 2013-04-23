@@ -1,7 +1,7 @@
 Summary:        OSCAR Packaging helpers.
 Name:           oscar-packager
 Version:        __VERSION__
-Release:        0.50
+Release:        1
 Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
 Distribution:   OSCAR
 Packager:       Olivier Lahaye <olivier.lahaye@cea.fr>
@@ -31,57 +31,32 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
-* Mon Apr 15 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.50
-- New beta version (see changelog)
-
-* Sun Apr 14 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.49
-- New beta version (see changelog)
-
-* Sat Apr 13 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.48
-- New beta version (see changelog)
-
-* Fri Apr 12 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.47
-- New beta version (see changelog)
-
-* Tue Apr 09 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.46
-- New beta version (see changelog)
-
-* Mon Apr 08 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.45
-- New beta version (see changelog)
-
-* Sun Apr 07 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.44
-- New beta version (see changelog)
-
-* Sun Apr 07 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.43
-- New beta version (see changelog)
-
-* Thu Apr 04 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.42
-- New beta version (see changelog)
-
-* Thu Apr 04 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.41
-- New beta version (see changelog)
-
-* Thu Apr 04 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.40
-- New beta version (see changelog)
-- spec version updated from Makefile.
-
-* Tue Apr 02 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.33
-- New beta version (see changelog)
-
-* Fri Mar 29 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.32
-- New beta version (see changelog)
-
-* Wed Mar 27 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.31
-- New beta version (see changelog)
-
-* Mon Mar 25 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.3
-- Upgraded c3 to 5.1.3 (new version) in core_unstable.cfg
-
-* Thu Mar 14 2013 DongInn Kim <dikim@cs.indiana.edu> 1.1.0-0.2
+* Mon Mar 25 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-1
+- spec version updated from Makefile using VERSION file.
+- New upstream release with at least the following features:
 - More intelligent building process for the oscar packages and opkgs.
-
-* Sun Mar 10 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-0.1
-- New upstream beta version
+- Upgraded:
+  - c3 to 5.1.3 (new version) in core_unstable.cfg
+  - torque to 4.1.4
+  - ganglia to 3.5.7 (web) and 3.5.0 (daemons)
+  - jobmonarch to 1.0 (final release)
+- Added packages in the build structure
+  - systemimager + bittorent + flamethrower
+  - systemconfigurator
+  - systeminstaller-oscar
+  - oscar-packager
+  - opkgc
+  - pvm
+  - network-configurator
+  - loghost
+  - oscar-v
+  - oscar-installer
+  - oscar-nat
+  - system-update
+  - jobmonarch + pyPgSQL + pbs_python
+  - blcr
+- More packages supported under debian.
+See ChangeLog for more informations.
 
 * Wed Nov 14 2012 Olivier Lahaye <olivier.lahaye@cea.fr> 1.0.1-2
 - used __make macro instead of make. makeinstall macro is useless here.
