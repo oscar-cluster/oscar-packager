@@ -1,7 +1,8 @@
-1.1.0 (not yet released):
+1.1.0:
 - [dikim] More intelligent building process for the oscar packages and opkgs:
   - Added support for make_rpm.sh and make_deb.sh build script
-  - Added support for precommand in <package>.cfg.
+  - Added support for precommand in <package>.cfg with support for
+    BASE_DIR, PKG_NAME, SRC_DIR.
   - Add "option" field in config file (--define , --target x86_64,i686 ...)
 - [ol] Now debian build without Makefile is supported: if package.cfg has a tarball and:
   - it contains a debian/control file
