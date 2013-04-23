@@ -414,6 +414,11 @@ sub create_binary ($$$$$$) {
             if (! -f $spec_file) {
                 $spec_file = "$basedir/rpm/$name.spec";
             } 
+            if (! -f $spec_file) {
+                print "ERROR: Unable to generate rpm package for $name.\n";
+                print "       No $name.cfg (can't locate source) and no $name.spec file.\n";
+                return -1;
+            }
             my $build_cmd = "rpmbuild -bb $spec_file";
 
             # Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
@@ -422,13 +427,14 @@ sub create_binary ($$$$$$) {
             $build_cmd .= $rpmbuild_options;
 
             if (run_build_and_move($build_cmd,$output)) {
-                print "ERROR: No rpms have been generated for package $name\n.";
+                print "ERROR: No rpms have been generated for package $name.\n";
                 print "       Failed command (produced nothing) was: $build_cmd\n" if ($debug);
                 return -1;
             }
             return 0;
         }
         if($os->{pkg} eq "deb"){
+            # FIXME: We should try a dpkg-buildpackage if a debian directory exists (just like for rpm if there is a spec file available).
             # FIXME: We could try make deb.(in case a build_rpm with tarball url is in a deb: rule).
             carp "ERROR: There is no corresponding config file: $config_file";
             return -1;
