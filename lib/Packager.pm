@@ -923,7 +923,7 @@ sub package_opkg ($$) {
     }
 
     if ($verbose >= 5) {
-         print "$build_file parsed:\n"
+         print "$build_file parsed:\n";
          OSCAR::Utils::print_array (@config);
     }
 
