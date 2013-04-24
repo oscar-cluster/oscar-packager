@@ -922,8 +922,10 @@ sub package_opkg ($$) {
         die "ERROR: Impossible to parse the build file";
     }
 
-    # FIXME: OL: need if $verbose and apropriate message.
-    OSCAR::Utils::print_array (@config);
+    if ($verbose >= 5) {
+         print "$build_file parsed:\n"
+         OSCAR::Utils::print_array (@config);
+    }
 
     # main build routine
     if (build_binaries ($pdir, \@config, $output)) {
