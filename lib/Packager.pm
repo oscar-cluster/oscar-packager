@@ -434,10 +434,32 @@ sub create_binary ($$$$$$) {
             return 0;
         }
         if($os->{pkg} eq "deb"){
-            # FIXME: We should try a dpkg-buildpackage if a debian directory exists (just like for rpm if there is a spec file available).
-            # FIXME: We could try make deb.(in case a build_rpm with tarball url is in a deb: rule).
-            carp "ERROR: There is no corresponding config file: $config_file";
-            return -1;
+            # We try a dpkg-buildpackage if a debian/control file exists (just like for rpm if there is a spec file available).
+            if ( -f "./debian/control" ) {
+                $cmd = "dpkg-buildpackage -b -uc -us";
+                $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
+                print "[INFO] Building DEB package using dpkg-buildpackage -b -uc -us\n" if $verbose;
+            } elsif ( -f "./Makefile" ) {
+                # Else, if no debian/control file, then we try a make debi if there is a Makefile.
+                $cmd = "make deb";
+                print "[INFO] Building DEB package using make deb\n" if $verbose;
+            } else {
+                print "ERROR: There is no corresponding config file ($config_file), no debian dir and no Makefile\n";
+                print "       Can't build debian package for $basedir.\n";
+                return -1;
+            }
+            print "[DEBUG] About to run: $cmd\n" if $debug;
+            if (system $cmd) {
+                carp "ERROR: Impossible to execute $cmd";
+                return -1;
+            } else {
+                # Build succeeded, avoid future build attempt (Make build from main)
+                system "touch $basedir/build.stamp";
+            }
+
+            # Now, we need to move *.deb to dest.
+            move_debfiles($basedir, $output, $sel);
+            return 0;
         }
     }
     # ELSE: we have a config file for package.
