@@ -401,6 +401,7 @@ sub create_binary ($$$$$$) {
 
     # Is the config file for the package creation here or not?
     my $config_file = "$basedir/$name.cfg";
+    my $build_cmd ="";
     if (! -f $config_file) {
         if($os->{pkg} eq "rpm"){
             # In the rpm-based system,
@@ -419,7 +420,7 @@ sub create_binary ($$$$$$) {
                 print "       No $name.cfg (can't locate source) and no $name.spec file.\n";
                 return -1;
             }
-            my $build_cmd = "rpmbuild -bb $spec_file";
+            $build_cmd = "rpmbuild -bb $spec_file";
 
             # Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
             # and chdir to $packaging_dir/$name.
@@ -436,21 +437,21 @@ sub create_binary ($$$$$$) {
         if($os->{pkg} eq "deb"){
             # We try a dpkg-buildpackage if a debian/control file exists (just like for rpm if there is a spec file available).
             if ( -f "./debian/control" ) {
-                $cmd = "dpkg-buildpackage -b -uc -us";
-                $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
+                $build_cmd = "dpkg-buildpackage -b -uc -us";
+                $build_cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
                 print "[INFO] Building DEB package using dpkg-buildpackage -b -uc -us\n" if $verbose;
             } elsif ( -f "./Makefile" ) {
                 # Else, if no debian/control file, then we try a make debi if there is a Makefile.
-                $cmd = "make deb";
+                $build_cmd = "make deb";
                 print "[INFO] Building DEB package using make deb\n" if $verbose;
             } else {
                 print "ERROR: There is no corresponding config file ($config_file), no debian dir and no Makefile\n";
                 print "       Can't build debian package for $basedir.\n";
                 return -1;
             }
-            print "[DEBUG] About to run: $cmd\n" if $debug;
-            if (system $cmd) {
-                carp "ERROR: Impossible to execute $cmd";
+            print "[DEBUG] About to run: $build_cmd\n" if $debug;
+            if (system $build_cmd) {
+                carp "ERROR: Impossible to execute $build_cmd";
                 return -1;
             } else {
                 # Build succeeded, avoid future build attempt (Make build from main)
