@@ -399,7 +399,7 @@ sub create_package ($$) {
             my $build_cmd = $cmd . $precmd;
             $build_cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
             if (system ($build_cmd)) {
-                print "ERROR: [create_package: run precmd] Impossible to execute $cmd\n";
+                print "ERROR: [create_package: run precmd] Impossible to execute $build_cmd\n";
                 push (@failed_comp, $c);
                 # Precommand failed, package won't build.
                 next;
@@ -412,8 +412,13 @@ sub create_package ($$) {
                 || $file_type eq OSCAR::Defs::TARBALL()) {
                 if (-f "$packaging_dir/$c/Makefile") {
                     $cmd .= "make deb PKGDEST=$pkg_destdir UNSIGNED_OSCAR_PKG=1";
-                    $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
+                } elsif (-f "$packaging_dir/$c/debian/control") {
+                    $cmd .= "dpkg-buildpackage -b -uc -us ;";
+                    $cmd .= "mv -f ../*$c*.deb $pkg_destdir";
+                } else {
+                    $cmd .= "echo 'Don't know how to build package'";
                 }
+                $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
             } else {
                 oscar_log_subsection "ERROR: Unknown type ($file_type)";
                 push (@failed_comp, $c);
@@ -433,7 +438,13 @@ sub create_package ($$) {
                 }
             } elsif ($file_type eq OSCAR::Defs::SRPM()) {
                 $cmd .= "rpmbuild --rebuild $filename";
-                $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
+                if (run_build_and_move($cmd,$pkg_destdir)) {
+                    print "ERROR: No rpms have been generated for package $c.\n";
+                    print "       Failed command (produced nothing) was: $cmd\n" if ($debug);
+                    push (@failed_comp, $c);
+                    next;
+                    # Package build failed, we stop here.
+                }
             } else {
                 oscar_log_subsection "ERROR: Unknown type ($file_type)";
                 push (@failed_comp, $c);

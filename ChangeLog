@@ -1,4 +1,8 @@
 1.1.0:
+- [ol] Add support for building packages that have no build.cfg on debian (from svn or extracted tarball).
+  - Build using make deb if a Makefile is present.
+  - Build using dpkg-buildpackage if debian/control file exists.
+- [ol] Don't forget to move resulting rpm if source is an src.rpm
 - [dikim] More intelligent building process for the oscar packages and opkgs:
   - Added support for make_rpm.sh and make_deb.sh build script
   - Added support for precommand in <package>.cfg with support for
