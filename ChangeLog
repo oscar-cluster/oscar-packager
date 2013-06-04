@@ -1,4 +1,5 @@
 1.1.0:
+- [ol] build_package: avoid polluting --output directory with build materials (tarball, temp files, extracted files, ...)
 - [ol] Add support for building packages that have no build.cfg on debian (from svn or extracted tarball).
   - Build using make deb if a Makefile is present.
   - Build using dpkg-buildpackage if debian/control file exists.
