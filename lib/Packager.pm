@@ -451,7 +451,7 @@ sub create_binary ($$$$$$) {
             }
             print "[DEBUG] About to run: $build_cmd\n" if $debug;
             if (system $build_cmd) {
-                carp "ERROR: Impossible to execute $build_cmd";
+                carp "ERROR: command execution failed: $build_cmd";
                 return -1;
             } else {
                 # Build succeeded, avoid future build attempt (Make build from main)
