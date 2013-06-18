@@ -7,6 +7,6 @@ Build-Depends: debhelper (>=8)
 
 Package: oscar-packager
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depend}, rapt, wget, subversion, liboscar, libappconfig-perl, fakeroot, dpkg-dev, debhelper, build-essential
+Depends: ${shlibs:Depends}, ${misc:Depend}, rapt, packman, opkgc, wget, subversion, liboscar, libappconfig-perl, fakeroot, dpkg-dev, debhelper, build-essential
 Description: OSCAR Packaging helpers.
  Set of scripts and Perl modules for the automatic packaging of the OSCAR.
