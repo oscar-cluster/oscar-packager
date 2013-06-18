@@ -37,7 +37,7 @@ dist: clean
 
 rpm: dist
 	@cp $(PKG).tar.gz `rpm --eval '%_sourcedir'`
-	rpmbuild -bb --target noarch ./$(NAME).spec
+	@rpmbuild -bb --target noarch ./$(NAME).spec
 	@if [ -n "$(PKGDEST)" ]; then \
 		RPMDIR=$(shell rpm --eval '%{_rpmdir}') ;\
 		(which rpmspec 2>/dev/null) && RPMSPEC_CMD="rpmspec --target noarch" || RPMSPEC_CMD="rpm --specfile --define '%_target_cpu noarch'"; \
@@ -53,4 +53,14 @@ rpm: dist
 	fi
 
 deb:
-	dpkg-buildpackage -rfakeroot
+	@dpkg-buildpackage -rfakeroot -b -uc -us
+	@if [ -n "$(PKGDEST)" ]; then \
+		FILES=../oscar-packager*.deb ;\
+		echo "Moving file(s) ($$FILES) to $(PKGDEST)"; \
+		for FILE in $$FILES; \
+		do \
+			echo "   $${FILE} --> $(PKGDEST)"; \
+			mv $${FILE} $(PKGDEST); \
+		done; \
+	fi
+
