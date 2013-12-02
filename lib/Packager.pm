@@ -1041,7 +1041,7 @@ __END__
 
 =item package_opkg
 
-Package a given OPKG. Example: package_opkg ("/var/lib/oscar/package/c3/build.cfg");
+Package a given OPKG. Example: package_opkg ("/usr/lib/oscar/package/c3/build.cfg");
 
 =item available_releases
 
