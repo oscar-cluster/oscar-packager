@@ -13,6 +13,7 @@ BuildArch:      noarch
 AutoReqProv:    no
 Requires:       wget, oscar-base-lib > 6.1.2r9859, rpm-build, subversion
 Requires:       packman, opkgc
+Requires:       oscar-base-scripts
 
 %description
 Set of scripts and Perl modules for the automatic packaging of the OSCAR.
@@ -31,6 +32,9 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Fri Dec 13 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-2
+- Added dep on oscar-base-scripts as it needs that
+  oscar-config --setup-distro is run in order to work.
 * Mon Mar 25 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-1
 - spec version updated from Makefile using VERSION file.
 - New upstream release with at least the following features:
