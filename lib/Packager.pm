@@ -847,13 +847,16 @@ sub install_requires {
             return -1;
         }
     my $distro_id = "$os->{distro}-$os->{distro_version}-$os->{arch}";
-        my $cmd = "/usr/bin/packman install ".join(" ",@install_stack)." --distro $distro_id";
-        $cmd .= " --verbose" if $verbose;
-        OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
-        if (system($cmd)) {
-            print "ERROR: Failed to install requires: ".join(" ",@reqs)."\n";
-            $return_code=-1;
-        }
+    
+    # need to quote package as it can be 'perl(Pod::Man)'
+    @install_stack = map { "'$_'" } @install_stack;
+    my $cmd = "/usr/bin/packman install ".join(" ",@install_stack)." --distro $distro_id";
+    $cmd .= " --verbose" if $verbose;
+    OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
+    if (system($cmd)) {
+        print "ERROR: Failed to install requires: ".join(" ",@reqs)."\n";
+        $return_code=-1;
+    }
         # TODO: update that for both RPM and Debian
 #         local *CMD;
 #         open CMD, "rpm -qa --qf '%{NAME}.%{ARCH}\n' |" or do {
