@@ -32,6 +32,8 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Fri Dec 13 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.1-1
+- New upstream version. See chanlog for more info.
 * Fri Dec 13 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-2
 - Added dep on oscar-base-scripts as it needs that
   oscar-config --setup-distro is run in order to work.
