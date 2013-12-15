@@ -1,7 +1,7 @@
 Summary:        OSCAR Packaging helpers.
 Name:           oscar-packager
 Version:        __VERSION__
-Release:        1
+Release:        2
 Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
 Distribution:   OSCAR
 Packager:       Olivier Lahaye <olivier.lahaye@cea.fr>
@@ -10,7 +10,6 @@ Group:          Development/Libraries
 Source:         %{name}-%{version}.tar.gz
 BuildRoot:      %{_localstatedir}/tmp/%{name}-root
 BuildArch:      noarch
-AutoReqProv:    no
 Requires:       wget, oscar-base-lib > 6.1.2r9859, rpm-build, subversion
 Requires:       packman, opkgc
 Requires:       oscar-base-scripts
@@ -27,11 +26,14 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %files
 %defattr(-,root,root)
 %{_bindir}/*
-%{perl_vendorlib}/*
+%{perl_vendorlib}/OSCAR/*
 %{_mandir}/*
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Sun Dec 15 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.1-2
+- Removed AutoReqProv: no so we have deps generated
+- Avoid owning %{perl_vendorlib}/OSCAR (conflict on fc-18+)
 * Fri Dec 13 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.1-1
 - New upstream version. See chanlog for more info.
 * Fri Dec 13 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.0-2
