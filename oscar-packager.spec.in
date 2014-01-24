@@ -1,7 +1,7 @@
 Summary:        OSCAR Packaging helpers.
 Name:           oscar-packager
 Version:        __VERSION__
-Release:        2
+Release:        1
 Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
 Distribution:   OSCAR
 Packager:       Olivier Lahaye <olivier.lahaye@cea.fr>
@@ -31,6 +31,8 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Fri Jan 24 2014 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.2-1
+- New version.
 * Sun Dec 15 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.1-2
 - Removed AutoReqProv: no so we have deps generated
 - Avoid owning %{perl_vendorlib}/OSCAR (conflict on fc-18+)
