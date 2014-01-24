@@ -24,6 +24,7 @@ use OSCAR::FileUtils;
 use OSCAR::ConfigFile;
 use OSCAR::OCA::OS_Detect;
 use OSCAR::Logger;
+use OSCAR::LoggerDefs;
 use OSCAR::Packager;
 use File::Path;
 use Carp;
@@ -324,7 +325,7 @@ sub create_package ($$) {
 
 
         #OSCAR::Logger::oscar_log_subsection "Packaging $c...";
-        print "[INFO] --> Packaging: $c...\n";
+        oscar_log(1, INFO, "--> Packaging: $c...");
         my $source = $$cpts{$c};
         my ($method, $url) = split (",", $source);
         if ($method eq "svn") {
@@ -386,6 +387,8 @@ sub create_package ($$) {
 
         # We make sure we pre-process the downloaded files.
         if ($file_type eq OSCAR::Defs::TARBALL()) {
+            # FIXME: OL: Possible enhancement:
+            # try rpmbuild -ts. if success, use the resulting srpm as $filname and set filetype to SRPM().
             if (extract_file("$packaging_dir/$c/$filename","$packaging_dir/$c")) {
                 print "ERROR: [create_package: extract_file] Impossible to extract $filename\n";
                 push (@failed_comp, $c);
@@ -409,35 +412,86 @@ sub create_package ($$) {
         }
 
         # We compile the package (if not built by prepare_prereqs)
+        # OL: FIXME: how do we know if package has been built by prepare prereqs?
         if ($os->{pkg} eq "deb") {
             if ($file_type eq OSCAR::Defs::SVN() 
                 || $file_type eq OSCAR::Defs::TARBALL()) {
-                if (-f "$packaging_dir/$c/Makefile") {
-                    $cmd .= "make deb PKGDEST=$pkg_destdir UNSIGNED_OSCAR_PKG=1";
-                } elsif (-f "$packaging_dir/$c/debian/control") {
+                if (-f "$packaging_dir/$c/debian/control") {
                     $cmd .= "dpkg-buildpackage -b -uc -us ;";
                     $cmd .= "mv -f ../*$c*.deb $pkg_destdir";
+                } elsif (-f "$packaging_dir/$c/Makefile") {
+                    $cmd .= "make deb PKGDEST=$pkg_destdir UNSIGNED_OSCAR_PKG=1";
                 } else {
                     $cmd = "echo 'WARNING: No build instruction for $c.'";
                     # Note: we do not fail here.
                 }
-                $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
-            } else {
-                oscar_log_subsection "ERROR: Unknown type ($file_type)";
+                $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
+                if(oscar_system($cmd)) {
+                    oscar_log(1, ERROR, "No deb have been generated for package $c.");
+                    oscar_log(5, ERROR, "       Failed command (produced nothing) was: $cmd");
+                    push (@failed_comp, $c);
+                    next;
+                    # Package build failed, we stop here.
+                } # else SUCCESS.
+             } else {
+                oscar_log(5, ERROR, "Unhandeled type ($file_type) under debian");
                 push (@failed_comp, $c);
                 # Don't know how to build this kind of file under debian.
                 next;
             }
         } elsif ($os->{pkg} eq "rpm") {
-            if ($file_type eq OSCAR::Defs::SVN()
-                || $file_type eq OSCAR::Defs::TARBALL()) {
+
+            my $rpm_src_dir=`rpm --eval '%{_sourcedir}'`;
+
+            if ($file_type eq OSCAR::Defs::SVN()) {
+                # 1st: do we have a spec file?
+                my $tarball = build_tarball_from_dir_spec("$packaging_dir/$c");
+                if ( defined $tarball ) { # We got a tarball from a spec file Bingo!
+                    $cmd .= "rpmbuild -tb $tarball";
+                    if (run_build_and_move($cmd,$pkg_destdir)) {
+                        oscar_log(1, ERROR, "No rpms have been generated for package $c.");
+                        oscar_log(5, ERROR, "       Failed command (produced nothing) was: $cmd");
+                        push (@failed_comp, $c);
+                        next;
+                        # Package build failed, we stop here.
+                    } # else: SUCCESS.
+                } else { # no spec file? Then we try a Makefile....
+                    if (-f "$packaging_dir/$c/Makefile") {
+                        $cmd .= "make rpm PKGDEST=$pkg_destdir SOURCEDIR=.$rpm_src_dir";
+                        $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
+                        if(oscar_system($cmd)) {
+                            oscar_log(1, ERROR, "No rpms have been generated for package $c.");
+                            oscar_log(5, ERROR, "       Failed command (produced nothing) was: $cmd");
+                            push (@failed_comp, $c);
+                            next;
+                            # Package build failed, we stop here.
+                        } # else SUCCESS.
+                    } else { # No spec file, no makefile. => don't know how to build a rpm.
+                        oscar_log(1, ERROR, "No rpms have been generated for package $c.");
+                        oscar_log(5, ERROR, "       No spec file, no Makefile. What did you expect?");
+                        push (@failed_comp, $c);
+                        next;
+                        # No way to build package, we stop here.
+                    }
+                }
+
+            } elsif ($file_type eq OSCAR::Defs::TARBALL()) {
                 if (-f "$packaging_dir/$c/Makefile") {
-                    $cmd .= "make rpm PKGDEST=$pkg_destdir";
-                    # Get the sourcedir (varies on distro)
-                    # OL: this is useless, Makefiles now  uses rpm --eval '%_sourcedir' 
-                    my $src_dir=`rpm --eval '%{_sourcedir}'`;
-                    $cmd .= " SOURCEDIR=".$src_dir;
-                    $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
+                    $cmd .= "make rpm PKGDEST=$pkg_destdir SOURCEDIR=.$rpm_src_dir";
+                    $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
+                    if(oscar_system($cmd)) {
+                        oscar_log(1, ERROR, "No rpms have been generated for package $c.");
+                        oscar_log(5, ERROR, "       Failed command (produced nothing) was: $cmd");
+                        push (@failed_comp, $c);
+                        next;
+                        # Package build failed, we stop here.
+                    } # else SUCCESS.
+                } else { # No spec file, no makefile. => don't know how to build a rpm.
+                    oscar_log(1, ERROR, "No rpms have been generated for package $c.");
+                    oscar_log(5, ERROR, "       No spec file, no Makefile. What did you expect?");
+                    push (@failed_comp, $c);
+                    next;
+                    # No way to build package, we stop here.
                 }
             } elsif ($file_type eq OSCAR::Defs::SRPM()) {
                 $cmd .= "rpmbuild --rebuild $filename";
@@ -447,7 +501,7 @@ sub create_package ($$) {
                     push (@failed_comp, $c);
                     next;
                     # Package build failed, we stop here.
-                }
+                } # else: SUCCESS.
             } else {
                 oscar_log_subsection "ERROR: Unknown type ($file_type)";
                 push (@failed_comp, $c);
@@ -455,43 +509,35 @@ sub create_package ($$) {
                 next;
             }
         } else {
-            print "ERROR: [create_package] Unknown binary package format ($os->{pkg})\n";
+            oscar_log(5, ERROR, "[create_package] Unknown binary package format ($os->{pkg})");
             push (@failed_comp, $c);
             # Don't know how to build this kind of file under rpm based distro.
             next;
         }
 
-        OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
-
-        if (system ($cmd)) {
-            print "[ERROR] Impossible to build $c ($cmd)\n";
-            push (@failed_comp, $c);
-            # Package build failed
-            next;
-        }else{
-            my $timestamp = localtime;
-            my $str = "$category:$c";
-            if($force or is_built($c, $category)){
-                system("sed -i \"/$str/d\" $built_pkgs");
-            }
-
-            open PKG, ">>$built_pkgs";
-            $str .= (" " x (50 - length($str)));
-            print PKG "$str:$timestamp\n";
-            close PKG;
+        # Here, we are in a SUCCESS situation. time to mark package as successfully built.
+        my $timestamp = localtime;
+        my $str = "$category:$c";
+        if($force or is_built($c, $category)){
+            system("sed -i \"/$str/d\" $built_pkgs");
         }
+
+        open PKG, ">>$built_pkgs";
+        $str .= (" " x (50 - length($str)));
+        print PKG "$str:$timestamp\n";
+        close PKG;
     }
 
     $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
     $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
     $cmd .= " --verbose" if ($verbose);
-    if (system($cmd)) {
-        carp "ERROR: Impossible to execute $cmd" if ($debug);
+    if (oscar_system($cmd)) {
+        oscar_log(1, ERROR, "Failed to update repository indexes.");
         # OL: Push this command to failed_comp??????
         # push (@failed_comp, $cmd);
+    } else {
+        oscar_log(2, INFO, "$pkg_destdir repo index has been updated");
     }
-
-    print "[INFO] $pkg_destdir repo index has been updated\n";
 
     return @failed_comp;
 }

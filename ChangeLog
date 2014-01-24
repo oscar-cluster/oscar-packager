@@ -1,3 +1,8 @@
+1.1.2:
+- [ol] Now oscar-packager 1st try to build package from distro packaging files
+(debian dir or spec file). Then it tries as a last resort a make rpm.
+- [ol] Now oscar packager is able to build an rpm from tarball or svn using
+spec file fount in toplevel of archive.
 1.1.1:
 - [ol] Add support for generic package names like perl(Pod::Man) or glibc-devel(x86-32)
 1.1.0:

@@ -33,7 +33,8 @@ BEGIN {
 
 use strict;
 use Carp;
-use Switch;
+use v5.10.1;
+use Switch 'Perl5', 'Perl6';
 use vars qw($VERSION @EXPORT);
 use base qw(Exporter);
 use Cwd;
@@ -44,6 +45,7 @@ use OSCAR::ConfigFile;
 use OSCAR::Defs;
 use OSCAR::FileUtils;
 use OSCAR::Logger;
+use OSCAR::LoggerDefs;
 use OSCAR::OCA::OS_Detect;
 use OSCAR::Utils;
 
@@ -52,6 +54,9 @@ use OSCAR::Utils;
             package_opkg
             prepare_prereqs
             run_build_and_move
+            get_source_name_from_spec
+            get_expected_archive_dir_from_spec
+            build_tarball_from_dir_spec
             );
 
 our $verbose=0;
@@ -1035,6 +1040,148 @@ sub prepare_prereqs ($$) {
     return 0;
 }
 
+################################################################################
+=item build_tarball_from_dir_spec
+
+Create an tarball from specified directory using filename computed from .pec file
+found if any
+Files are moved to a sub directory called %{name}-%{version}, then they are
+put in the apropriate tarball (check archive type from spec file).
+
+ Input: none
+
+Return:  0: tarball name
+        -1: undef
+
+=cut
+################################################################################
+
+sub build_tarball_from_dir_spec($) {
+    my $working_directory = shift;
+    # Try to guess spec file (just like rpmbuild -tb);
+    my @spec_files = glob("$working_directory/*.spec");
+    if ( scalar(@spec_files) == 0 ) {
+        oscar_log(5, WARNING, "No spec file found; NOTING BUILT here.");
+        return undef;
+    }
+
+    oscar_log(5, WARNING, "More than one spec file: ".join(" ",@spec_files).
+                          "\nUsing 1st one.") if (scalar(@spec_files) > 1 );
+
+    # Now, move files into a %{name}-%{version} directory.
+    my $archive_dir = get_expected_archive_dir_from_spec($spec_files[0]);
+    
+    if (! defined $archive_dir) {
+        oscar_log(5, ERROR, "Failed to parse $spec_files[0] to retreive %name-%version");
+        return undef;
+    }
+    my $archive_name = get_source_name_from_spec($spec_files[0]);
+    if (! defined $archive_name) {
+        oscar_log(5, ERROR, "Failed to parse $spec_files[0] to compute source file name.");
+        return undef;
+    }
+    my @files = glob("$working_directory/*"); # We get the list of files before creating the directory.
+    mkdir "$working_directory/$archive_dir";
+    for my $file (@files) {        
+        rename("$file","$working_directory/$archive_dir/".basename($file))
+            or oscar_log(5, WARNING, "Failed to move $file to $archive_dir; Archive will be incomplete");
+    }
+
+    # Now, create the tarball in current directory.
+    my $archive_command = "cd $working_directory; ";
+    given ($archive_name) {
+        when (/\.tar\.xz/) {
+            $archive_command .= "tar cpJf $archive_name $archive_dir";
+        }
+        when (/\.tar\.bz2/) {
+            $archive_command .= "tar cpjf $archive_name $archive_dir";
+        }
+        when (/\.tar\.gz/) {
+            $archive_command .= "tar cpzf $archive_name $archive_dir";
+        }
+        when (/\.tar\.Z/) {
+            $archive_command .= "tar cpZf $archive_name $archive_dir";
+        }
+        when (/\.tar$/) {
+            $archive_command .= "tar cpf $archive_name $archive_dir";
+        }
+        when (/\.zip/) {
+            $archive_command .= "zip $archive_name $archive_dir";
+        }
+        default {
+            oscar_log(5, ERROR, "Archive format not supported for $archive_name");
+            return 1;
+        }
+    }
+
+    if(oscar_system($archive_command)) {
+        oscar_log(5, ERROR, "Failed to create $archive_name");
+        return undef;
+    }
+
+    # Now we have the archive in current directory.
+    return "$working_directory/$archive_name";
+}
+
+sub get_expected_archive_dir_from_spec($) {
+    my $spec_file = shift;
+    if(! defined $spec_file) {
+        oscar_log(5, ERROR, "specfile not defined");
+        return undef;
+    }
+    if(! -f $spec_file) {
+        oscar_log(5, ERROR, "$spec_file not found");
+        return undef;
+    }
+    if(!open SPEC, "<$spec_file") {
+        oscar_log(5, ERROR, "Failed to open $spec_file for reading");
+        return undef;
+    }
+
+    my $cmd = "rpmspec -q $spec_file --queryformat '%{name}-%{version}'";
+    oscar_log(7, ACTION, "About to run: $cmd");
+    my $dir_name = `$cmd`;
+    if ($?) {
+        oscar_log(5, ERROR, "Failed to query $spec_file");
+        return undef;
+    }
+
+    return $dir_name;
+}
+
+sub get_source_name_from_spec($) {
+    my $spec_file = shift;
+    my $dir_name = get_expected_archive_dir_from_spec($spec_file);
+    if(! defined $dir_name) {
+        oscar_log(5, ERROR, "Failed to get archive name");
+        return undef;
+    }
+    # We are sure that $spec_file is defined and exists.
+    #(tested by get_expected_archive_dir_from_spec())
+    #
+    if(!open SPEC, "<$spec_file") {
+        oscar_log(5, ERROR, "Failed to open $spec_file for reading");
+        return undef;
+    }
+
+    my $archive_ext;
+
+    while (my $line = <SPEC>) {
+        if($line =~ /^[Ss]ource:.*(.tar.xz|.tar.bz2|.tar.gz|.tar.Z|.tar|.zip)$/) {
+            $archive_ext = $1;
+            last;
+        }
+    }
+
+    if (! defined $archive_ext) {
+        oscar_log(5, ERROR, "unable to find Source: from $spec_file");
+        return undef;
+    }
+
+    my $archive_name = "$dir_name"."$archive_ext";
+
+    return $archive_name;
+}
 
 __END__
 
