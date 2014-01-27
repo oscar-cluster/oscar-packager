@@ -55,8 +55,7 @@ use OSCAR::Utils;
             package_opkg
             prepare_prereqs
             run_build_and_move
-            get_source_name_from_spec
-            get_expected_archive_dir_from_spec
+            parse_spec
             build_tarball_from_dir_spec
             );
 
@@ -374,7 +373,16 @@ sub run_build_and_move($$) {
 sub create_binary ($$$$$$) {
     my ($basedir, $name, $conf, $sel, $test, $output) = @_;
 
-    oscar_log(1, SUBSECTION, "Packaging $name");
+    #
+    # Get the OS informations
+    #
+    my $os = OSCAR::OCA::OS_Detect::open();
+    if (!defined $os) {
+        oscar_log(1, ERROR, "Unable to detect the binary package format");
+        return -1;
+    }
+
+    oscar_log(1, SUBSECTION, "Building $name $os->{pkg} package(s).");
 
     #
     # Get, check or prepare the download dir.
@@ -394,15 +402,6 @@ sub create_binary ($$$$$$) {
     my $binaries_path = OSCAR::ConfigFile::get_value ("/etc/oscar/oscar.conf",
                                                       undef,
                                                       "OSCAR_SCRIPTS_PATH");
-    #
-    # Get the OS informations
-    #
-    my $os = OSCAR::OCA::OS_Detect::open();
-    if (!defined $os) {
-        oscar_log(1, ERROR, "Unable to detect the binary package format");
-        return -1;
-    }
-
     # Is the config file for the package creation here or not?
     my $config_file = "$basedir/$name.cfg";
     my $build_cmd ="";
@@ -997,7 +996,7 @@ sub prepare_prereqs ($$) {
     } elsif ($os->{pkg} eq "deb") {
         $run_script = "$dir/build_deb.sh";
     } else {
-        oscar_log(5, ERROR, "Packaging system '$os->{pkg}' is not currently supported");
+        oscar_log(1, ERROR, "Packaging system '$os->{pkg}' is not currently supported");
         return -1;
     }
 
@@ -1011,9 +1010,9 @@ sub prepare_prereqs ($$) {
     
     my $build_file = "$dir/build.cfg";
     if (! -f "$build_file") {
-        oscar_log(1, INFO, "No $build_file, no prereqs");
+        oscar_log(4, INFO, "No 'build.cfg', no prereqs to handle.");
     } else {
-        oscar_log(1, INFO, "Managing prereqs ($build_file)");
+        oscar_log(4, INFO, "Managing prereqs ($build_file)");
         if (package_opkg ($build_file, $output)) {
             oscar_log(1, ERROR, "Unable to prepare the prereqs ($dir, $output)");
             return -1;
@@ -1052,17 +1051,15 @@ sub build_tarball_from_dir_spec($) {
                           "\nUsing 1st one.") if (scalar(@spec_files) > 1 );
 
     # Now, move files into a %{name}-%{version} directory.
-    my $archive_dir = get_expected_archive_dir_from_spec($spec_files[0]);
+    #    my $archive_dir = get_expected_archive_dir_from_spec($spec_files[0]);
     
-    if (! defined $archive_dir) {
-        oscar_log(5, ERROR, "Failed to parse $spec_files[0] to retreive %name-%version");
+    my ($archive_dir, $ext_name) = parse_spec($spec_files[0]);
+    if (! defined $archive_dir || ! defined $ext_name) {
+        oscar_log(5, ERROR, "Failed to parse $spec_files[0] to retreive Source:");
         return undef;
     }
-    my $archive_name = get_source_name_from_spec($spec_files[0]);
-    if (! defined $archive_name) {
-        oscar_log(5, ERROR, "Failed to parse $spec_files[0] to compute source file name.");
-        return undef;
-    }
+    my $archive_name = "$archive_dir"."$ext_name";
+
     my @files = glob("$working_directory/*"); # We get the list of files before creating the directory.
     mkdir "$working_directory/$archive_dir";
     for my $file (@files) {        
@@ -1072,7 +1069,7 @@ sub build_tarball_from_dir_spec($) {
 
     # Now, create the tarball in current directory.
     my $archive_command = "cd $working_directory; ";
-    given ($archive_name) {
+    given ($ext_name) {
         when (/\.tar\.xz/) {
             $archive_command .= "tar cpJf $archive_name $archive_dir";
         }
@@ -1106,64 +1103,69 @@ sub build_tarball_from_dir_spec($) {
     return "$working_directory/$archive_name";
 }
 
-sub get_expected_archive_dir_from_spec($) {
+#sub get_expected_archive_dir_from_spec($) {
+#    my $spec_file = shift;
+#    if(! defined $spec_file) {
+#        oscar_log(5, ERROR, "specfile not defined");
+#        return undef;
+#    }
+#    if(! -f $spec_file) {
+#        oscar_log(5, ERROR, "$spec_file not found");
+#        return undef;
+#    }
+#    if(!open SPEC, "<$spec_file") {
+#        oscar_log(5, ERROR, "Failed to open $spec_file for reading");
+#        return undef;
+#    }
+#
+#    my $cmd = "rpmspec -q $spec_file --queryformat '%{name}-%{version}'";
+#    oscar_log(7, ACTION, "About to run: $cmd");
+#    my $dir_name = `$cmd`;
+#    if ($?) {
+#        oscar_log(5, ERROR, "Failed to query $spec_file");
+#        return undef;
+#    }
+#
+#    return $dir_name;
+#}
+
+sub parse_spec($) {
     my $spec_file = shift;
-    if(! defined $spec_file) {
-        oscar_log(5, ERROR, "specfile not defined");
-        return undef;
+
+    if (! -f $spec_file) {
+        oscar_log(5, ERROR, "$spec_file not found.");
+        return (undef,undef);
     }
-    if(! -f $spec_file) {
-        oscar_log(5, ERROR, "$spec_file not found");
-        return undef;
-    }
+    #my $dir_name = get_expected_archive_dir_from_spec($spec_file);
+    my $dir_name = basename($spec_file, '.spec'); # Safe default value.
+
     if(!open SPEC, "<$spec_file") {
         oscar_log(5, ERROR, "Failed to open $spec_file for reading");
-        return undef;
-    }
-
-    my $cmd = "rpmspec -q $spec_file --queryformat '%{name}-%{version}'";
-    oscar_log(7, ACTION, "About to run: $cmd");
-    my $dir_name = `$cmd`;
-    if ($?) {
-        oscar_log(5, ERROR, "Failed to query $spec_file");
-        return undef;
-    }
-
-    return $dir_name;
-}
-
-sub get_source_name_from_spec($) {
-    my $spec_file = shift;
-    my $dir_name = get_expected_archive_dir_from_spec($spec_file);
-    if(! defined $dir_name) {
-        oscar_log(5, ERROR, "Failed to get archive name");
-        return undef;
-    }
-    # We are sure that $spec_file is defined and exists.
-    #(tested by get_expected_archive_dir_from_spec())
-    #
-    if(!open SPEC, "<$spec_file") {
-        oscar_log(5, ERROR, "Failed to open $spec_file for reading");
-        return undef;
+        oscar_log(1, ERROR, "Unable to determine archive name. Using $dir_name.tar.gz as default");
+        return ($dir_name, '.tar.gz');
     }
 
     my $archive_ext;
 
     while (my $line = <SPEC>) {
-        if($line =~ /^[Ss]ource:.*(.tar.xz|.tar.bz2|.tar.gz|.tar.Z|.tar|.zip)$/) {
-            $archive_ext = $1;
+        if($line =~ /^[Ss]ource:\s*(.*)(.tar.xz|.tar.bz2|.tar.gz|.tar.Z|.tar|.zip)$/) {
+            $archive_ext = $2;
+            $dir_name = basename($1,(".tar.xz", ".tar.bz2", ".tar.gz", ".tar.Z", ".tar", ".zip"));
             last;
         }
     }
 
-    if (! defined $archive_ext) {
+    if (! defined $archive_ext || ! defined $dir_name) {
         oscar_log(5, ERROR, "unable to find Source: from $spec_file");
         return undef;
     }
 
-    my $archive_name = "$dir_name"."$archive_ext";
+    my $cmd = "rpmspec -q --queryformat '$dir_name' $spec_file";
+    oscar_log(7, ACTION, "About to run: $cmd");
+    my $dir_name = `$cmd`;
+    chomp($dir_name);
 
-    return $archive_name;
+    return ($dir_name,$archive_ext);
 }
 
 __END__
