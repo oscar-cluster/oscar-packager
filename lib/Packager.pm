@@ -298,7 +298,7 @@ sub move_debfiles($$$) {
         my @elmts = grep /.+\.deb$/, readdir DIR;
         closedir DIR; 
         foreach ( @elmts ) {
-            oscar_log(1, INFO, "Moving " . File::Basename::basename ($_) . " to " . $output);
+            oscar_log(4, INFO, "Moving " . File::Basename::basename ($_) . " to " . $output);
             File::Copy::copy ( "$fromdir/$_" , $output)
         }
     }
@@ -357,7 +357,7 @@ sub run_build_and_move($$) {
         chomp($pkg);
         if ( -f $pkg ) {
             $cmd = "mv -f $pkg $output";
-            oscar_log(1, INFO, "Moving " . File::Basename::basename ($pkg) . " to " . $output);
+            oscar_log(4, INFO, "Moving " . File::Basename::basename ($pkg) . " to " . $output);
             if (oscar_system ($cmd)) {
                 return -1;
             }
@@ -435,6 +435,7 @@ sub create_binary ($$$$$$) {
                 oscar_log(5, ERROR, "       Failed command (produced nothing) was: $build_cmd");
                 return -1;
             }
+            oscar_log(1, INFO, "$name successfully built.");
             return 0;
         }
         if($os->{pkg} eq "deb"){
@@ -461,6 +462,7 @@ sub create_binary ($$$$$$) {
 
             # Now, we need to move *.deb to dest.
             move_debfiles($basedir, $output, $sel);
+            oscar_log(1, INFO, "$name successfully built.");
             return 0;
         }
     }
@@ -661,6 +663,7 @@ sub create_binary ($$$$$$) {
             oscar_log(1, ERROR, "Unsupported file type for binary package creation ($source_type)");
             return -1;
         }
+        oscar_log(1, INFO, "$name successfully built.");
     } elsif ($os->{pkg} eq "deb") {
         if ($source_type eq OSCAR::Defs::TARBALL()) {
 
@@ -727,6 +730,7 @@ sub create_binary ($$$$$$) {
 
             # Now, we need to move *.deb to dest.
             move_debfiles($basedir, $output, $sel);
+            oscar_log(1, INFO, "$name successfully built.");
         } else {
             # For unsupported source type (srpm, svn), we try the precommand. It could do the trick.....
             oscar_log(4, INFO, "Building DEB from unsupported archive type (".$source_type.") from ".$source_file);
