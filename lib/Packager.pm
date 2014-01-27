@@ -41,6 +41,7 @@ use Cwd;
 use File::Basename;
 use File::Copy;
 use File::Path;
+use OSCAR::Env;
 use OSCAR::ConfigFile;
 use OSCAR::Defs;
 use OSCAR::FileUtils;
@@ -76,7 +77,7 @@ sub get_config {
     local *IN;
     my ($line, $match, @config);
 
-    open IN, "$path" or (carp "ERROR: Could not open $path: $!", return undef);
+    open IN, "$path" or (oscar_log(5, ERROR, "Could not open $path: $!"), return undef);
     while ($line = <IN>) {
         chomp $line;
         if ($line =~ /^\s*\[([^:]+):([^:]+):([^:]+)\]/) {
@@ -89,8 +90,7 @@ sub get_config {
             $match = 0;
             if ($str =~ m/^$mstr$/) {
             $match = 1;
-            print "found matching block [$d:$v:$a] for $distro:$distver:$arch\n" 
-                if $verbose;
+            oscar_log(6, INFO, "Found matching block [$d:$v:$a] for $distro:$distver:$arch"); 
             last;
             }
         }
@@ -119,7 +119,8 @@ sub parse_build_file ($) {
 
     my $os = OSCAR::OCA::OS_Detect::open();
     if (!defined $os) {
-        die "ERROR: Impossible to detect the binary package format";
+        oscar_log(5, ERROR, "Unable to detect the binary package format");
+        return undef;
     }
 
     # read in package build config file
@@ -130,7 +131,7 @@ sub parse_build_file ($) {
                              $os->{compat_distrover},
                              $os->{arch});
     } else {
-        carp "ERROR: Build configuration file $cfile not found!";
+        oscar_log(1, WARNING, "Build configuration file $cfile not found!");
         return undef;
     }
     return @config;
@@ -208,19 +209,19 @@ sub prepare_rpm_env ($$$$$) {
     # We check the parameters
     #
     if (!defined ($confp) && ref($confp) ne "HASH") {
-        carp "ERROR: Invalid configuration data";
+        oscar_log(5, ERROR, "Invalid configuration data");
         return undef;
     }
     if (!OSCAR::Utils::is_a_valid_string ($name)) {
-        carp "ERROR: Invalid OPKG name";
+        oscar_log(5, ERROR, "Invalid OPKG name");
         return undef;
     }
     if (!defined ($os)) {
-        carp "ERROR: Invalid OS_Detect data";
+        oscar_log(5, ERROR, "Invalid OS_Detect data");
         return undef;
     }
     if (! -d $dest) {
-        carp "ERROR: Invalid destination";
+        oscar_log(5, ERROR, "Invalid destination");
         return undef;
     }
 
@@ -256,10 +257,10 @@ sub prepare_rpm_env ($$$$$) {
         $env = $conf{env};
     }
     if (! -d "$dest") {
-        OSCAR::Logger::oscar_log_subsection ("Creating directory: $dest");
+        oscar_log(5, INFO, "Creating directory: $dest");
         eval { File::Path::mkpath ("$dest") };
         if ($@) {
-            carp "ERROR: Couldn't create $dest: $@";
+            oscar_log(5, ERROR, "Couldn't create $dest: $@");
             return 1;
         }
     }
@@ -278,7 +279,7 @@ sub prepare_rpm_env ($$$$$) {
     }
     $ENV{RPMBUILDOPTS} = $opt;
     if ($opt) {
-        OSCAR::Logger::oscar_log_subsection ("Setting \$RPMBUILDOPTS=$opt...");
+        oscar_log(5, INFO, "Setting \$RPMBUILDOPTS=$opt...");
     }
     return $opt;
 }
@@ -294,11 +295,11 @@ sub prepare_rpm_env ($$$$$) {
 sub move_debfiles($$$) {
     my ($fromdir, $output, $sel) = @_;
     if ( -d "$fromdir" ) {
-        opendir( DIR, "$fromdir" ) || die "Fail to opendir $fromdir : $!\n";
+        opendir( DIR, "$fromdir" ) || (oscar_log (1, ERROR, "Fail to opendir $fromdir : $!"), return -1);
         my @elmts = grep /.+\.deb$/, readdir DIR;
         closedir DIR; 
         foreach ( @elmts ) {
-            print "Moving " . File::Basename::basename ($_) . " to " . $output . "\n" if $verbose;
+            oscar_log(1, INFO, "Moving " . File::Basename::basename ($_) . " to " . $output);
             File::Copy::copy ( "$fromdir/$_" , $output)
         }
     }
@@ -321,8 +322,8 @@ sub run_build_and_move($$) {
     # Try to run the command and open the pipe.
     $ENV{LC_ALL} = 'C';
     unless (open(BUILD, "$cmd 2>&1 |")) {
-        print "ERROR: Failed to run build command: rc=$!.\n" if $verbose;
-        print "       Failed command was: $cmd\n" if $debug;
+        oscar_log(1, ERROR, "Failed to run build command: rc=$!.");
+        oscar_log(5, ERROR, "       Failed command was: $cmd");
         return -1;
     }
 
@@ -337,30 +338,28 @@ sub run_build_and_move($$) {
         if ($output_line =~ /^dpkg-deb: building package .* in `(.*\.deb)'.$/) {
             push(@pkgs, $1);
         }
-        print "$output_line\n" if $debug;
+        print "$output_line\n" if($OSCAR::Env::oscar_verbose >= 10);
     }
 
     # Close the pipe and check the return code.
     unless (close (BUILD)) {
-        print "ERROR: Failed to build package: rc=$!.\n" if ($verbose);
-        print "       Failed command was: $cmd\n";
+        oscar_log(1, ERROR, "Failed to build package: rc=$!.");
+        oscar_log(5, ERROR, "       Failed command was: $cmd");
         return -1;
     }
 
     # Now we move resulting packages to $output.
     if (scalar(@pkgs) == 0) {
-        print "ERROR: No package have been generated\n";
-        print "       Command that did produce nothing was: $cmd\n" if $debug;
+        oscar_log(1, ERROR, "No package have been generated");
+        oscar_log(5, ERROR, "       Command that did produce nothing was: $cmd");
         return -1;
     }
     foreach my $pkg (@pkgs) {
         chomp($pkg);
         if ( -f $pkg ) {
             $cmd = "mv -f $pkg $output";
-            print "Moving " . File::Basename::basename ($pkg) . " to " . $output . "\n" if $verbose;
-            OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
-            if (system ($cmd)) {
-                carp "ERROR: Impossible to execute $cmd";
+            oscar_log(1, INFO, "Moving " . File::Basename::basename ($pkg) . " to " . $output);
+            if (oscar_system ($cmd)) {
                 return -1;
             }
         }
@@ -375,7 +374,7 @@ sub run_build_and_move($$) {
 sub create_binary ($$$$$$) {
     my ($basedir, $name, $conf, $sel, $test, $output) = @_;
 
-    OSCAR::Logger::oscar_log_subsection ("Packaging $name");
+    oscar_log(1, SUBSECTION, "Packaging $name");
 
     #
     # Get, check or prepare the download dir.
@@ -387,7 +386,7 @@ sub create_binary ($$$$$$) {
     if (! -d $download_dir) {
         eval { File::Path::mkpath ($download_dir) };
         if ($@) {
-            carp "ERROR: Couldn't create $download_dir: $@";
+            oscar_log(5, ERROR, "Couldn't create $download_dir: $@");
             return -1;
         }
     }    my $build_dir = "$basedir";
@@ -400,7 +399,7 @@ sub create_binary ($$$$$$) {
     #
     my $os = OSCAR::OCA::OS_Detect::open();
     if (!defined $os) {
-        carp "ERROR: Impossible to detect the binary package format";
+        oscar_log(1, ERROR, "Unable to detect the binary package format");
         return -1;
     }
 
@@ -421,8 +420,8 @@ sub create_binary ($$$$$$) {
                 $spec_file = "$basedir/rpm/$name.spec";
             } 
             if (! -f $spec_file) {
-                print "ERROR: Unable to generate rpm package for $name.\n";
-                print "       No $name.cfg (can't locate source) and no $name.spec file.\n";
+                oscar_log(1, ERROR, "Unable to generate rpm package for $name.");
+                oscar_log(1, ERROR, "       No $name.cfg (can't locate source) and no $name.spec file.");
                 return -1;
             }
             $build_cmd = "rpmbuild -bb $spec_file";
@@ -433,8 +432,8 @@ sub create_binary ($$$$$$) {
             $build_cmd .= " $rpmbuild_options";
 
             if (run_build_and_move($build_cmd,$output)) {
-                print "ERROR: No rpms have been generated for package $name.\n";
-                print "       Failed command (produced nothing) was: $build_cmd\n" if ($debug);
+                oscar_log(1, ERROR, "No rpms have been generated for package $name.");
+                oscar_log(5, ERROR, "       Failed command (produced nothing) was: $build_cmd");
                 return -1;
             }
             return 0;
@@ -444,23 +443,21 @@ sub create_binary ($$$$$$) {
             if ( -f "./debian/control" ) {
                 $build_cmd = "dpkg-buildpackage -b -uc -us";
                 $build_cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
-                print "[INFO] Building DEB package using dpkg-buildpackage -b -uc -us\n" if $verbose;
+                oscar_log(4, INFO, "Building DEB package using dpkg-buildpackage -b -uc -us");
             } elsif ( -f "./Makefile" ) {
                 # Else, if no debian/control file, then we try a make debi if there is a Makefile.
                 $build_cmd = "make deb";
-                print "[INFO] Building DEB package using make deb\n" if $verbose;
+                oscar_log(4, INFO, "Building DEB package using make deb");
             } else {
-                print "ERROR: There is no corresponding config file ($config_file), no debian dir and no Makefile\n";
-                print "       Can't build debian package for $basedir.\n";
+                oscar_log(5, ERROR, "There is no corresponding config file ($config_file), no debian dir and no Makefile");
+                oscar_log(1, ERROR, "Can't build debian package for $basedir.");
                 return -1;
             }
-            print "[DEBUG] About to run: $build_cmd\n" if $debug;
-            if (system $build_cmd) {
-                carp "ERROR: command execution failed: $build_cmd";
+            if (oscar_system $build_cmd) {
                 return -1;
             } else {
                 # Build succeeded, avoid future build attempt (Make build from main)
-                system "touch $basedir/build.stamp";
+                oscar_system("touch $basedir/build.stamp");
             }
 
             # Now, we need to move *.deb to dest.
@@ -484,7 +481,7 @@ sub create_binary ($$$$$$) {
 
     # Now, since we can access the config file, we parse it and download the
     # needed source files.
-    OSCAR::Logger::oscar_log_subsection "Downloading sources for $name...";
+    oscar_log(4, INFO, "Downloading sources for $name...");
     my $source_data = OSCAR::ConfigFile::get_value ("$config_file",
                                                     undef,
                                                     "source");
@@ -498,7 +495,7 @@ sub create_binary ($$$$$$) {
                                              $download_dir,
                                              $method,
                                              OSCAR::Defs::NO_OVERWRITE())) {
-            carp "ERROR: Impossible to download the source file ($source)";
+            oscar_log(1, ERROR, "Failed to download the source file ($source)");
             return -1
         }
  
@@ -509,7 +506,7 @@ sub create_binary ($$$$$$) {
         $source_type = OSCAR::FileUtils::file_type ("$download_dir/$source_file");
 
         if (!defined $source_type) {
-            carp "ERROR: Impossible to detect the source file format";
+            oscar_log(1, ERROR, "Unable to detect the source file format");
             return -1;
         }
     } else {
@@ -539,34 +536,29 @@ sub create_binary ($$$$$$) {
         # Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
         my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $basedir);
         if ($source_type eq OSCAR::Defs::SRPM()) {
-            print "[INFO] Building RPM from SRPM ".$source_file."\n" if $verbose;
+            oscar_log(4, INFO, "Building RPM from SRPM ".$source_file);
             # In this situation, the build environment is ready, we can run the precommand if any.
             if($pre_cmd){
-                if (system($pre_cmd)) {
-                     print "ERROR: Build RPM from SRPM: Impossible to execute precommand: $pre_cmd\n";
+                if (oscar_system($pre_cmd)) {
                      return -1;
                 }
             }
             $cmd = "$binaries_path/build_rpms --only-rpm $download_dir/$source_file $rpmbuild_options";
             $cmd .= " --verbose" if $verbose;
             $ENV{'RPMBUILDOPTS'} = $config_data if (defined ($config_data));
-            OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
             if (!$test) {
-                if (system($cmd)) {
-                    carp "ERROR: Command execution failed: $! ($cmd)";
+                if (oscar_system($cmd)) {
                     return -1;
                 } 
             }
             $ENV{'RPMBUILDOPTS'} = "";
             # Resulting rpms are stored in the current directory.($basedir)
             $cmd = "mv ./*$name*.rpm $output";
-            print "Executing: $cmd\n";
-            if (system ($cmd)) {
-                carp "ERROR: Impossible to execute $cmd";
+            if (oscar_system ($cmd)) {
                 return -1;
             }
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
-            print "[INFO] Building RPM from TARBALL ".$source_file."\n" if $verbose;
+            oscar_log(4, INFO, "Building RPM from TARBALL ".$source_file);
             my $build_cmd="rpmbuild";
             # We copy the source files in %{_sourcedir} (and spec files in .)
             foreach my $sf (@src_files){
@@ -580,7 +572,7 @@ sub create_binary ($$$$$$) {
                         unlink "$basedir/$sf";
                     }
                     symlink ("$download_dir/$sf", "$basedir/$sf") 
-                        or (carp "ERROR: impossible to link the file ($download_dir/$sf, $basedir)",
+                        or (oscar_log(5, ERROR, "Unable to link the file ($download_dir/$sf, $basedir)"),
                             return -1);
                 } else {
                     # Not a spec file, copy the source in $src_dir.
@@ -590,14 +582,14 @@ sub create_binary ($$$$$$) {
                         unlink "$src_dir/$sf";
                     }
                     symlink ("$download_dir/$sf", "$src_dir/$sf") 
-                        or (carp "ERROR: impossible to link the file ($download_dir/$sf, $src_dir)",
+                        or (oscar_log(5, ERROR,  "Unable to link the file ($download_dir/$sf, $src_dir)"),
                             return -1);
                 }
             }
 
             # We try to copy the rpm additional sources that are in ./rpm/$name/ if any.
             if ( -d "$basedir/rpm/$name/" ) {
-                opendir( DIR, "$basedir/rpm/$name/" ) || die "Fail to opendir $basedir/rpm/$name : $!\n";
+                opendir( DIR, "$basedir/rpm/$name/" ) || (oscar_log(5, ERROR, "Fail to opendir $basedir/rpm/$name : $!"), return -1);
                 my @elmts = grep !/(?:^\.$)|(?:^\.\.$)/, readdir DIR;
                 closedir DIR; 
                 foreach ( @elmts ) {
@@ -610,7 +602,7 @@ sub create_binary ($$$$$$) {
             #
             if($pre_cmd){
                 if (system($pre_cmd)) {
-                     print "ERROR: Build RPM from TARBALL: Impossible to execute precommand: $pre_cmd\n";
+                     oscar_log(5, ERROR, "Unable to execute precommand: $pre_cmd");
                      return -1;
                 }
             }
@@ -627,12 +619,12 @@ sub create_binary ($$$$$$) {
             if ( -f $spec_file ) {
                 # If we have a spec file (from @src_files or from ./rpm )
                 # build the rpm using this spec file.
-                print "[INFO] Building RPM package using provided spec file.\n" if $verbose;
+                oscar_log(4, INFO, "Building RPM package using provided spec file.");
                 $build_cmd .= " -bb $spec_file";
             } else {
                 # No spec file (either in @src_files or from ./rpm )
                 # We try a tarbuild with the hope that there is a spec file inside the tarball.
-                print "[INFO] Building RPM package using spec file from tarball.\n" if $verbose;
+                oscar_log(4, INFO, "Building RPM package using spec file from tarball.");
                 $build_cmd .= " -tb $src_dir/$src_files[0]";
             }
 
@@ -649,32 +641,31 @@ sub create_binary ($$$$$$) {
             $build_cmd .= " $rpmbuild_options";
 
             if (run_build_and_move($build_cmd,$output)) {
-                print "ERROR: No rpms have been generated for package $name\n.";
-                print "       Failed command (produced nothing) was: $build_cmd\n" if ($debug);
+                oscar_log(1, ERROR, "No rpms have been generated for package $name.");
+                oscar_log(5, ERROR, "       Failed command (produced nothing) was: $build_cmd");
                 return -1;
             }
         } else {
             # On RPM distro, we support only SRPM or TARBALL.
             # FIXME: We should try "make rpm" here.
-            print "[INFO] Building RPM from unsupported file type ".$source_file."\n" if $verbose;
+            oscar_log(1, INFO, "Building RPM from unsupported file type ".$source_file);
 
             #
             # The build material is in place. In this situation, we can run the precommand if any.
             #
             if($pre_cmd){
-                if (system($pre_cmd)) {
-                     print "ERROR: Build RPM from Unsupported source type: Impossible to execute precommand: $pre_cmd\n";
+                if (oscar_system($pre_cmd)) {
+                     oscar_log(1, ERROR, "ERROR: Unable to execute precommand: $pre_cmd");
                      return -1;
                 }
             }
-             carp "ERROR: Unsupported file type for binary package creation ".
-                 "($source_type)";
+            oscar_log(1, ERROR, "Unsupported file type for binary package creation ($source_type)");
             return -1;
         }
     } elsif ($os->{pkg} eq "deb") {
         if ($source_type eq OSCAR::Defs::TARBALL()) {
 
-            print "[INFO] Building DEB from TARBALL ".$source_file."\n" if $verbose;
+            oscar_log(4, INFO, "Building DEB from TARBALL ".$source_file);
 
             # OL FIXME: having extract file returning a list of new objects in $dest would be more reliable).
             # Try to guess the name of the extracted directory.
@@ -682,20 +673,20 @@ sub create_binary ($$$$$$) {
 
             # We extract the source_file and cd to basedir.
             if (extract_file("$download_dir/$source_file","$basedir")) {
-                print "WARNING: [create_package: extract_file] Impossible to extract $source_file\nFalling back to make deb method.\n" if $verbose;
+                oscar_log(1, ERROR, "Unable to extract $source_file\nFalling back to make deb method.");
                 # Can't extract, we'll fall back to "make deb"
             } else {
                 if ( -d "$basedir/$extracted_dir/" ) {
                     # Good guess.
                     # 1st, we check if there is a debian/ dir in the extracted archive.
                     if ( -d "$basedir/$extracted_dir/debian" ) {
-                        print "[INFO] Found debian/ directory in $source_file. I'll use this to build the package\n" if $verbose;
+                        oscar_log(4, INFO, "Found debian/ directory in $source_file. I'll use this to build the package.");
                     } else {
                         # 2nd, if no debian/ dir, then we try to copy our debian directory if any in the extracted archive.
                         # We try to copy the debian build material that is in ./debian if any.
                         # FIXME: We should copy recursively filtering .svn stuffs using Xcopy
                         if ( -d "$basedir/debian/" ) {
-                            opendir( DIR, "$basedir/debian/" ) || die "Fail to opendir $basedir/debian : $!\n";
+                            opendir( DIR, "$basedir/debian/" ) || (oscar_log(5, ERROR, "Fail to opendir $basedir/debian : $!"), return -1);
                             my @elmts = grep !/(?:^\.$)|(?:^\.\.$)|(?:.svn)/, readdir DIR;
                             closedir DIR; 
                             mkdir "$basedir/$extracted_dir/debian";
@@ -705,7 +696,7 @@ sub create_binary ($$$$$$) {
                         }
                     }
                 } else {
-                    print "[WARNING] no debian/ directory found in $source_file. I'll use the make deb method to build the package\n" if $verbose;
+                    oscar_log(4, WARNING, "No debian/ directory found in $source_file. I'll use the make deb method to build the package.");
                 }
             }
 
@@ -714,7 +705,7 @@ sub create_binary ($$$$$$) {
             #
             if($pre_cmd){
                 if (system($pre_cmd)) {
-                     print "ERROR: Build DEB from TARBALL: Impossible to execute precommand: $pre_cmd\n";
+                     oscar_log(1, ERROR, "Unable to execute precommand: $pre_cmd");
                      return -1;
                 }
             }
@@ -722,45 +713,42 @@ sub create_binary ($$$$$$) {
             if ( -f "$basedir/$extracted_dir/debian/control" ) {
                 $cmd = "cd $basedir/$extracted_dir; dpkg-buildpackage -b -uc -us";
                 $cmd .= " 1>/dev/null 2>/dev/null" if (!$debug);
-                print "[INFO] Building DEB package using dpkg-buildpackage -b -uc -us\n" if $verbose;
+                oscar_log(4, INFO, "Building DEB package using dpkg-buildpackage -b -uc -us");
             } else {
                 # Else, if no debian/control file, then we try a make deb.
                 $cmd = "make deb";
-                print "[INFO] Building DEB package using make deb\n" if $verbose;
+                oscar_log(4, INFO, "Building DEB package using 'make deb'");
             }
-            print "[DEBUG] About to run: $cmd\n" if $debug;
-            if (system $cmd) {
-                carp "ERROR: Impossible to execute $cmd";
+            if (oscar_system $cmd) {
                 return -1;
             } else {
                 # Build succeeded, avoid future build attempt (Make build from main)
-                system "touch $basedir/build.stamp";
+                oscar_system("touch $basedir/build.stamp");
             }
 
             # Now, we need to move *.deb to dest.
             move_debfiles($basedir, $output, $sel);
         } else {
             # For unsupported source type (srpm, svn), we try the precommand. It could do the trick.....
-            print "[INFO] Building DEB from unsupported archive type (".$source_type.") from ".$source_file."\n" if $verbose;
+            oscar_log(4, INFO, "Building DEB from unsupported archive type (".$source_type.") from ".$source_file);
             #
             # The build material is in place. In this situation, we can run the precommand if any.
             #
             if($pre_cmd){
-                if (system($pre_cmd)) {
-                     print "ERROR: Build DEB from unsupported archive type: Impossible to execute precommand: $pre_cmd\n";
+                if (oscar_system($pre_cmd)) {
+                     oscar_log(1, ERROR, "Unable to execute precommand: $pre_cmd");
                      return -1;
                 }
             } else {
                 # No precommand and unsupported source type means nothing is built.
-                carp "ERROR: Unsupported file type for binary package creation ".
-                     "($source_type)";
+                oscar_log(1, ERROR, "Unsupported file type for binary package creation ($source_type)");
                 return -1;
             }
-            print "[WARNING] Build for unsupported source type was attempted. The precommand was successful Though\n" .
-                  "          Please check that the build occured\n";
+            oscar_log(1, WARNING, "Build for unsupported source type was attempted. The precommand was successful Though\n" .
+                  "          Please check that the build occured");
         }
     } else {
-        carp "ERROR: $os->{pkg} is not currently supported";
+        oscar_log(1, ERROR, "Packaging system '$os->{pkg}' is not currently supported");
         return -1;
     }
 
@@ -780,7 +768,7 @@ sub build_if_needed ($$$$) {
     my ($march, $build_arch, $OHOME, $test, $err);
     $test = 0;
 
-    OSCAR::Logger::oscar_log_subsection ("Building binary packages");
+    oscar_log(1, SUBSECTION, "Building binary packages");
 
     my $env;
     my %conf = %{$confp};
@@ -789,18 +777,17 @@ sub build_if_needed ($$$$) {
 
         for my $g (keys(%{$conf{$sel}})) {
             if (create_binary ($pdir, $g, $confp, $sel, $test, $target)) {
-                carp "ERROR: Impossible to create the binary ".
-                     "($g, $test, $target)";
+                oscar_log(1, ERROR, "Failed to create the binary package ".
+                     "($g, $test, $target)");
                 $err++;
             }
         }
     }
 
     if ($err) {
-        OSCAR::Logger::oscar_log_subsection ("ERROR: Impossible to create ".
-            "some binary packages");
+        oscar_log (1, ERROR, "Failed to create some binary packages");
     } else {
-        OSCAR::Logger::oscar_log_subsection ("Binary packages created");
+        oscar_log (1, SUBSECTION, "Binary packages created");
     }
     return $err;
 }
@@ -818,17 +805,17 @@ sub install_requires {
     my ($requires) = @_;
     my $return_code=0;
 
-    OSCAR::Logger::oscar_log_subsection ("Installing requirements");
+    oscar_log (4, SUBSECTION, "Installing requirements");
 
     if (!$requires) {
-        OSCAR::Logger::oscar_log_subsection ("No requirements to install");
+        oscar_log (5, INFO, "No requirements to install");
         return 0;
     }
     my $test = 0;
     my @installed_reqs = ();
 
     my @reqs = split(" ",$requires);
-    OSCAR::Logger::oscar_log_subsection ("Requires: ".join(" ",@reqs));
+    oscar_log (5, INFO, "Requires: ".join(" ",@reqs));
 
     my @install_stack;
     for my $r (@reqs) {
@@ -848,7 +835,7 @@ sub install_requires {
 #                     split("\n",`rpm -qa --qf '%{NAME}.%{ARCH}\n'`);
     my $os = OSCAR::OCA::OS_Detect::open ();
     if (!defined $os && ref($os) ne "HASH") {
-            carp "ERROR: Impossible to detect the local distro";
+            oscar_log(5, ERROR, "Unable to detect the local distro");
             return -1;
         }
     my $distro_id = "$os->{distro}-$os->{distro_version}-$os->{arch}";
@@ -857,9 +844,8 @@ sub install_requires {
     @install_stack = map { "'$_'" } @install_stack;
     my $cmd = "/usr/bin/packman install ".join(" ",@install_stack)." --distro $distro_id";
     $cmd .= " --verbose" if $verbose;
-    OSCAR::Logger::oscar_log_subsection ("Executing: $cmd");
-    if (system($cmd)) {
-        print "ERROR: Failed to install requires: ".join(" ",@reqs)."\n";
+    if (oscar_system($cmd)) {
+        oscar_log(5, ERROR, "Failed to install requires: ".join(" ",@reqs));
         $return_code=-1;
     }
         # TODO: update that for both RPM and Debian
@@ -879,7 +865,7 @@ sub install_requires {
     if ($return_code != 0) {
         return $return_code;
     } else {
-        OSCAR::Logger::oscar_log_subsection ("[INFO] --> Requirements installed");
+        oscar_log(1, INFO, "--> Requirements installed");
         return 0;
    }
 }
@@ -899,21 +885,21 @@ sub build_binaries ($$$) {
 
         # install requires
         if (install_requires($conf{requires})) {
-            carp "ERROR: Impossible to install requirements";
+            oscar_log(5, ERROR, "Failed to install requirements");
             return -1;
         }
 
         # check and build common-rpms if needed
         $err = build_if_needed(\%conf, $pdir, "common", $output);
         if ($err) {
-            carp "ERROR: Impossible to build a binary ($pdir)";
+            oscar_log(5, ERROR, "Failed to build a binary ($pdir)");
             return -1;
         }
 
         # check and build dist specific binary packages if needed
         $err = build_if_needed(\%conf, $pdir, "dist", $output);
         if ($err) {
-            carp "ERROR: Impossible to build a binary ($pdir)";
+            oscar_log(5, ERROR, "Failed to build a binary ($pdir)");
             return -1;
         }
     }
@@ -925,42 +911,41 @@ sub build_binaries ($$$) {
 sub package_opkg ($$) {
     my ($build_file, $output) = @_;
     if (! -f ($build_file)) {
-        carp "ERROR: Invalid path ($build_file)";
+        oscar_log(5, ERROR, "Invalid path ($build_file)");
         return -1;
     }
 
+
     if (! -d $output) {
-        carp "ERROR: Output directory does not exist ($output)";
+        oscar_log(5, ERROR, "Output directory does not exist ($output)");
         return -1;
     }
 
     my $pdir = File::Basename::dirname ($build_file);;
     my $pkg = File::Basename::basename ($pdir);
     if (! -d $pdir) {
-        carp "ERROR: Could not locate package location based on $build_file!\n";
+        oscar_log(5, ERROR, "Could not locate package location based on $build_file!");
         return -1;
     }
     if (!OSCAR::Utils::is_a_valid_string ($pkg)) {
-        carp "ERROR: Impossible to get the OPKG name";
+        oscar_log(5, ERROR, "Unable to get the OPKG name");
         return -1;
     }
 
-    OSCAR::Logger::oscar_log_subsection "============ $pkg ===========";
-
+    oscar_log(1, SUBSECTION, "Packaging opkg-$build_file...");
 
     my @config = parse_build_file ($pdir);
     if (scalar (@config) == 0) {
-        die "ERROR: Impossible to parse the build file";
+        oscar_log(1, ERROR, "Unable to parse the build file");
+        return -1;
     }
 
-    if ($verbose >= 5) {
-         print "$build_file parsed:\n";
-         OSCAR::Utils::print_array (@config);
-    }
+    oscar_log(6, INFO, "$build_file parsed:");
+    OSCAR::Utils::print_array (@config) if($OSCAR::Env::oscar_verbose >= 6);
 
     # main build routine
     if (build_binaries ($pdir, \@config, $output)) {
-        carp "ERROR: Impossible to build some binaries";
+        oscar_log(5, ERROR, "Failed to build some binaries");
         return -1;
     }
 
@@ -975,7 +960,7 @@ sub available_releases () {
     my $path = "/etc/oscar/oscar-packager";
     my @files = OSCAR::FileUtils::get_files_in_path ("$path");
 
-    die "ERROR: Impossible to scan $path" if (scalar @files == 0);
+    (oscar_log(1, ERROR, "Unable to scan $path"), return undef) if (scalar @files == 0);
 
     my @releases;
     foreach my $f (@files) {
@@ -1000,7 +985,7 @@ sub prepare_prereqs ($$) {
 
     my $os = OSCAR::OCA::OS_Detect::open();
     if (!defined $os) {
-        carp "ERROR: Impossible to detect the binary package format";
+        oscar_log(5, ERROR, "Unable to detect the binary package format");
         return -1;
     }
 
@@ -1012,27 +997,25 @@ sub prepare_prereqs ($$) {
     } elsif ($os->{pkg} eq "deb") {
         $run_script = "$dir/build_deb.sh";
     } else {
-        carp "ERROR: $os->{pkg} is not currently supported";
+        oscar_log(5, ERROR, "Packaging system '$os->{pkg}' is not currently supported");
         return -1;
     }
 
     if( -f $run_script ){
         my $pkg_destdir=main::get_pkg_dest();
         $run_script="cd $dir; LC_ALL=C PKGDEST=$pkg_destdir $run_script";
-        print "Executing: $run_script\n" if $verbose;
-        if (system ($run_script)) {
-            carp "ERROR: Impossible to execute $cmd";
+        if (oscar_system ($run_script)) {
             return -1;
         }
     }
     
     my $build_file = "$dir/build.cfg";
     if (! -f "$build_file") {
-        OSCAR::Logger::oscar_log_subsection ("No $build_file, no prereqs");
+        oscar_log(1, INFO, "No $build_file, no prereqs");
     } else {
-        OSCAR::Logger::oscar_log_subsection ("Managing prereqs ($build_file)");
+        oscar_log(1, INFO, "Managing prereqs ($build_file)");
         if (package_opkg ($build_file, $output)) {
-            carp "ERROR: Impossible to prepare the prereqs ($dir, $output)";
+            oscar_log(1, ERROR, "Unable to prepare the prereqs ($dir, $output)");
             return -1;
         }
     }
