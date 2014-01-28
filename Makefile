@@ -30,6 +30,7 @@ dist: clean
 	@cp -rf * /tmp/$(PKG)
 	@cd /tmp/$(PKG); rm -rf `find . -name ".svn"`
 	@sed -e 's/__VERSION__/$(VERSION)/g' $(NAME).spec.in > $(NAME).spec
+	@sed -e 's/__VERSION__/$(VERSION)/g' debian/changelog.in > debian/changelog
 	@cd /tmp; tar czf $(PKG).tar.gz $(PKG)
 	@cp -f /tmp/$(PKG).tar.gz .
 	@rm -rf /tmp/$(PKG)/
