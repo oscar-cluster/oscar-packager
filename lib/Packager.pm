@@ -363,7 +363,7 @@ sub run_build_and_move($$) {
         if ( -f $pkg ) {
             # OL: FIXME: would better use perl(rename).
             $cmd = "mv -f $pkg $output";
-            oscar_log(4, INFO, "Moving " . File::Basename::basename ($pkg) . " to " . $output);
+            oscar_log(1, INFO, "Adding " . File::Basename::basename ($pkg) . " to " . File::Basename::basename ($output) . " repo");
             if (oscar_system ($cmd)) {
                 return -1;
             }
@@ -387,8 +387,6 @@ sub create_binary ($$$$$$) {
         oscar_log(1, ERROR, "Unable to detect the binary package format");
         return -1;
     }
-
-#    oscar_log(1, SUBSECTION, "Building $name $os->{pkg} package(s).");
 
     #
     # Get, check or prepare the download dir.
@@ -430,6 +428,7 @@ sub create_binary ($$$$$$) {
 
             if (-f $spec_file) { # Native distro build material
                 $build_cmd = "rpmbuild -bb $spec_file";
+                # OL: FIXME. WHERE IS THE SOURCE??????
 
                 # Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
                 # and chdir to $packaging_dir/$name.
@@ -471,7 +470,6 @@ sub create_binary ($$$$$$) {
             return -1;
         }
         # Here, we produced a package; we can leave.
-        oscar_log(1, INFO, "$name successfully built.");
         return 0;
     }
     # ELSE: we have a config file for package.
@@ -538,6 +536,10 @@ sub create_binary ($$$$$$) {
         $pre_cmd =~ s/BASE_DIR/$basedir/g;
         $pre_cmd =~ s/PKG_NAME/$name/g;
         $pre_cmd =~ s/SRC_DIR/$src_dir/g;
+
+        # Prevent pollution if verbosity is lower than debug (10)
+        # (between 6 and 10, we debug oscar-packager, not sub commands)
+        $pre_cmd = "($pre_cmd) >/dev/null 2>/dev/null" if($OSCAR::Env::oscar_verbose < 10);
     }
 
     my $cmd;
@@ -663,7 +665,7 @@ sub create_binary ($$$$$$) {
             oscar_log(1, ERROR, "Unsupported file type for binary package creation ($source_type)");
             return -1;
         }
-        oscar_log(1, INFO, "$name successfully built.");
+        oscar_log(1, INFO, "$name rpm(s) successfully built.");
     } elsif ($os->{pkg} eq "deb") {
         if ($source_type eq OSCAR::Defs::TARBALL()) {
 
@@ -736,7 +738,7 @@ sub create_binary ($$$$$$) {
 
 #            # Now, we need to move *.deb to dest.
 #            move_debfiles($basedir, $output, $sel);
-            oscar_log(1, INFO, "$name successfully built.");
+            oscar_log(1, INFO, "$name deb(s) successfully built.");
         } else {
             # For unsupported source type (srpm, svn), we try the precommand. It could do the trick.....
             oscar_log(4, INFO, "Building DEB from unsupported archive type (".$source_type.") from ".$source_file);
@@ -870,7 +872,7 @@ sub install_requires {
     if ($return_code != 0) {
         return $return_code;
     } else {
-        oscar_log(1, INFO, "--> Requirements installed");
+        oscar_log(1, INFO, "Requirement(s): (".join(", ",@reqs).") installed.");
         return 0;
    }
 }
@@ -985,29 +987,10 @@ sub prepare_prereqs ($$) {
 
     $packaging_dir = $dir;
 
-#    my $os = OSCAR::OCA::OS_Detect::open();
-#    if (!defined $os) {
-#        oscar_log(5, ERROR, "Unable to detect the binary package format");
-#        return -1;
-#    }
-
-#    my $cmd = "";
-#    my $run_script = "";
-
-#    $run_script = "$dir/build_$os->{pkg}.sh";
-
-#    if( -f $run_script ){
-#        my $pkg_destdir=main::get_pkg_dest();
-#        $run_script="cd $dir; LC_ALL=C PKGDEST=$pkg_destdir $run_script";
-#        if (oscar_system ($run_script)) {
-#            return -1;
-#        }
-#    }
-    
     my $build_file = "$dir/build.cfg";
     if (! -f "$build_file") {
         oscar_log(4, INFO, "No 'build.cfg', no prereqs to handle.");
-        return 0; # 0 build occured here.
+        return 0; # 0 build occured here (not a failure).
     } else {
         oscar_log(4, INFO, "Processing ($build_file)");
         # we return the number of build that were attempted or -1 if a failure occured.
@@ -1052,11 +1035,12 @@ sub build_tarball_from_dir_spec($$) {
     my $archive_name = "$archive_dir"."$ext_name";
 
     my @files = glob("$working_directory/*"); # We get the list of files before creating the directory.
-    mkdir "$working_directory/$archive_dir";
+    mkdir "$working_directory/$archive_dir.$$";
     for my $file (@files) {        
-        rename("$file","$working_directory/$archive_dir/".basename($file))
-            or oscar_log(5, WARNING, "Failed to move $file to $archive_dir; Archive will be incomplete");
+        rename("$file","$working_directory/$archive_dir.$$/".basename($file))
+            or oscar_log(5, WARNING, "Failed to move $file to $archive_dir.$$; Archive will be incomplete");
     }
+    rename("$working_directory/$archive_dir.$$","$working_directory/$archive_dir");
 
     # Now, create the tarball in current directory.
     my $archive_command = "cd $working_directory; ";
@@ -1129,32 +1113,24 @@ sub parse_spec($) {
     }
     #my $dir_name = get_expected_archive_dir_from_spec($spec_file);
     my $dir_name = basename($spec_file, '.spec'); # Safe default value.
+    my $archive_ext = '.tar.gz'; # Safe default value.
 
-    if(!open SPEC, "<$spec_file") {
-        oscar_log(5, ERROR, "Failed to open $spec_file for reading");
-        oscar_log(1, ERROR, "Unable to determine archive name. Using $dir_name.tar.gz as default");
-        return ($dir_name, '.tar.gz');
-    }
-
-    my $archive_ext;
-
-    while (my $line = <SPEC>) {
-        if($line =~ /^[Ss]ource[0-9]*:\s*(.*)(.tar.xz|.tar.bz2|.tar.gz|.tar.Z|.tar|.zip)$/) {
-            $archive_ext = $2;
-            $dir_name = basename($1,(".tar.xz", ".tar.bz2", ".tar.gz", ".tar.Z", ".tar", ".zip"));
-            last;
-        }
-    }
-
-    if (! defined $archive_ext || ! defined $dir_name) {
-        oscar_log(5, ERROR, "unable to find Source: from $spec_file");
-        return undef;
-    }
-
-    my $cmd = "rpmspec -q --queryformat '$dir_name' $spec_file";
+    my $cmd = "rpmspec --srpm -q --queryformat '%{SOURCE}' $spec_file";
     oscar_log(7, ACTION, "About to run: $cmd");
-    my $dir_name = `$cmd`;
-    chomp($dir_name);
+    my $source = `$cmd`;
+    if ($?) {
+        oscar_log(5, WARNING, "Failed to parse $spec_file. Using default values.");
+        return($dir_name,$archive_ext);
+    }
+    chomp($source);
+
+    if($source =~ /^(.*)(.tar.xz|.tar.bz2|.tar.gz|.tar.Z|.tar|.zip)$/) {
+        $archive_ext = $2;
+        $dir_name = basename($1,(".tar.xz", ".tar.bz2", ".tar.gz", ".tar.Z", ".tar", ".zip"));
+    } else {
+        oscar_log(5, ERROR, "Unable to find Source: from $spec_file. Using default values.");
+        return ($dir_name,$archive_ext);
+    }
 
     return ($dir_name,$archive_ext);
 }

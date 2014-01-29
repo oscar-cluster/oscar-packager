@@ -1,3 +1,18 @@
+1.2.0:
+- [ol] Major rewrite of the build algorythm. No more duplicated build.
+  [ol] Now oscar-packager can build a package the same way on deb and on rpm
+  (optionnaly using build.cfg) and using 1st debian/ or .spec and at last
+  Makefile (make rpm|deb).
+- [ol] Removed the build_{rpm,deb}.sh usage (not needed).
+- [ol] Now, oscar-packager moves the built packagei(s) itself. Now, it parses
+  the build output, collect the exact names of packages that are built and
+  moves them into the repo. No more glob used to try to collect resulting
+  packages.
+  => No more need to put logic in makefile to move resulting packages to
+  PKGDEST.
+- [ol] Greatly improved the logging output.
+- [ol] Added Tk-TextANSIColor package (both debian and rpm).
+
 1.1.3:
 - Migrated to new OSCAR::Logger mechanism.
 - When building from a spec file (from svn), parses the spec file to compute

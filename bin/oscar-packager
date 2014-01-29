@@ -60,8 +60,8 @@ my $config_file_path = "/etc/oscar/oscar-packager";
 my $built_pkgs = "$config_file_path/.oscar_pkgs";
 my %already_built = ();
 
+#my $initial_verbose = $ENV{OSCAR_VERBOSE};
 # Now we correctly set OSCAR_VERBOSE to be sure we get all the output we want
-my $initial_verbose = $ENV{OSCAR_VERBOSE};
 if ($quiet) {
     $ENV{OSCAR_VERBOSE} = 0;
     $OSCAR::Env::oscar_verbose = 0;
@@ -292,7 +292,7 @@ sub sanity_check () {
 sub set_failed($$) {
     my ($failed_comp_p, $package) = @_;
     push(@$failed_comp_p, $package);
-    oscar_log(1, SUBSECTION, "Failed to build $package");
+    oscar_log(1, ERROR, "[$package] build failed.");
     # TODO: removed correct entry in /etc/oscar/oscar-packager/.oscar_pkgs
 }
 
@@ -302,7 +302,6 @@ sub create_package ($$) {
     my ($cpts, $precmds) = @_;
     my @failed_comp = ();
 
-    oscar_log(1, SUBSECTION, "Creating binary packages");
     #
     # We get the destination directory for the packages
     #
@@ -344,7 +343,7 @@ sub create_package ($$) {
         }
 
 
-        oscar_log(1, SUBSECTION, "Building $c $os->{pkg} package(s)...");
+        oscar_log(1, SUBSECTION, "Building $c $os->{pkg} package(s)");
         my $source = $$cpts{$c};
         my ($method, $url) = split (",", $source);
         if ($method eq "svn") {
@@ -391,7 +390,7 @@ sub create_package ($$) {
             next;
         }
 
-        oscar_log(5, INFO, "File type: $file_type (see OSCAR::Defs for translation)");
+        oscar_log(5, INFO, "File type: $file_type");
 
         # We check the prereqs (including dependencies with other packages)
         # If build.cfg is present, the build is also triggered here.
@@ -404,7 +403,7 @@ sub create_package ($$) {
             # Stop here: failed to install dependancies and/or build package.
             next;
         } elsif($rc > 0) {
-            oscar_log(1, INFO, "Package $c successfully built.");
+            oscar_log(1, INFO, "[$c] $os->{pkg}(s) successfully built.");
             next;
         } # else $rc == 0, we still haven't attempted to build the package, so we continue.
 
@@ -436,6 +435,7 @@ sub create_package ($$) {
         }
 
         # Now we're ready to try to build the package.
+        oscar_log(1, INFO, "Building packages for $c.");
         if ($os->{pkg} eq "deb") {
             if ($file_type eq OSCAR::Defs::SVN() 
                 || $file_type eq OSCAR::Defs::TARBALL()) {
@@ -453,8 +453,6 @@ sub create_package ($$) {
                 }
                 $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
                 if (run_build_and_move($cmd,$pkg_destdir)) {
-                    oscar_log(1, ERROR, "No deb have been generated for package $c.");
-                    oscar_log(5, ERROR, "       Failed command (produced nothing) was: $cmd");
                     set_failed (\@failed_comp, $c);
                     next;
                     # Package build failed, we stop here.
@@ -466,12 +464,6 @@ sub create_package ($$) {
                 next;
             }
         } elsif ($os->{pkg} eq "rpm") {
-
-            oscar_log(9, INFO, "Getting %sourcedir from rpmrc: (rpm --eval '%{_sourcedir}')");
-            my $rpm_src_dir=`rpm --eval '%{_sourcedir}'`;
-            chomp($rpm_src_dir);
-            oscar_log(9, INFO, "Got %{_sourcedir} = $rpm_src_dir");
-
             if ($file_type eq OSCAR::Defs::SVN()
                    || $file_type eq OSCAR::Defs::TARBALL()) {
                 # 1st: do we have a spec file?
@@ -501,7 +493,7 @@ sub create_package ($$) {
                     } # else: SUCCESS.
                 } else { # no spec file? Then we try a Makefile....
                     if (-f "$packaging_dir/$c/Makefile") {
-                        $cmd .= "make rpm SOURCEDIR=.$rpm_src_dir";
+                        $cmd .= "make rpm";
                         oscar_log(4, INFO, "Building $c rpm package using Makefile.");
                         if(run_build_and_move($cmd,$pkg_destdir)) {
                             oscar_log(1, ERROR, "No rpms have been generated for package $c.");
@@ -550,7 +542,7 @@ sub create_package ($$) {
         print PKG "$str:$timestamp\n";
         close PKG;
 
-        oscar_log(1, SUBSECTION, "$c $os->{pkg} successfully built.");
+        oscar_log(1, INFO, "[$c] $os->{pkg}(s) successfully built.");
     }
 
     $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
@@ -558,8 +550,6 @@ sub create_package ($$) {
     $cmd .= " --verbose" if ($OSCAR::Env::oscar_verbose >= 5);
     if (oscar_system($cmd)) {
         oscar_log(1, ERROR, "Failed to update repository indexes.");
-        # OL: Push this command to failed_comp??????
-        # push (@failed_comp, $cmd);
     } else {
         oscar_log(2, INFO, "$pkg_destdir repo index has been updated");
     }
@@ -618,18 +608,17 @@ sub do_packaging ($$) {
 
     @main_failed_comp = create_package ($cpts, $precmds);
     if (scalar (@main_failed_comp) > 0) {
-        oscar_log(1, ERROR, "Errors occured during the OSCAR packaging.");
-        oscar_log(1, ERROR, "       OSCAR components that failed are: @main_failed_comp");
-        # exit 1;
+        oscar_log(1, SUBSECTION, "Errors occured during the creation of OSCAR packages.");
+        oscar_log(1, ERROR, "Failed builds are: @main_failed_comp");
     }
 
     # We now create the meta-package for all core OPKGs.
     if (-f $opkg_conffile) {
         @meta_failed_comp = create_opkgs_metapkg ($ocpts);
         if (scalar (@meta_failed_comp) > 0) {
-            oscar_log(1, ERROR, "Errors occured during the creation of meta-packages");
-            oscar_log(5, ERROR, "       for available OPKGs: @meta_failed_comp");
-            # exit 1;
+            oscar_log(1, SUBSECTION, "Errors occured during the creation of OSCAR meta-packages");
+            oscar_log(5, ERROR, "Failed builds are: @meta_failed_comp");
+            @meta_failed_comp = map {"opkg-" . $_} @meta_failed_comp;
         }
     } else {
         oscar_log(1, INFO, "No configuration for OPKGs found, skipping that step ".
@@ -639,8 +628,8 @@ sub do_packaging ($$) {
     # Build failed comp sumup.
     @failed_comp = ( @main_failed_comp , @meta_failed_comp );
     if (scalar (@failed_comp) > 0) {
-            oscar_log(1, ERROR, "Errors occured during the creation of packages");
-            oscar_log(1, ERROR, "       Failed build are: @failed_comp");
+            oscar_log(1, SECTION, "Errors occured during the creation of packages");
+            oscar_log(1, ERROR, "Failed builds are: @failed_comp");
     }
     return @failed_comp;
 }
@@ -676,6 +665,7 @@ sub package_type($$$$) {
 
     @failed_comp = do_packaging ($config_file, $opkg_conffile);
 
+    @failed_comp = map { "$type: " . $_ } @failed_comp;
     return @failed_comp;
 }
 
@@ -729,7 +719,8 @@ my @all_failed_comp = ( @core_failed_comp , @included_failed_comp );
 my $exit_code=0;
 
 if (scalar (@all_failed_comp) > 0) {
-    oscar_log(1, WARNING, "Packaging was not 100% successfull. Packages that fails to build are:".
+    oscar_log(1, WARNING, "Packaging was not 100% successfull.");
+    oscar_log(1, ERROR, "Packages that fails to build are:\n - ".
        join("\n - ", @all_failed_comp));
     $exit_code=1;
 } else {
@@ -737,11 +728,11 @@ if (scalar (@all_failed_comp) > 0) {
 }
 
 # Before to exit, we restore the initial OSCAR_VERBOSE value
-if (defined $initial_verbose) {
-    $ENV{OSCAR_VERBOSE} = $initial_verbose;
-}
+#if (defined $initial_verbose) {
+#    $ENV{OSCAR_VERBOSE} = $initial_verbose;
+#}
 
-oscar_log(1, INFO, "OSCAR Packager Ending");
+oscar_log(1, SECTION, "OSCAR Packager Ending");
 
 exit $exit_code;
 
