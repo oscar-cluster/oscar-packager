@@ -1078,57 +1078,80 @@ sub build_tarball_from_dir_spec($$) {
     return "$working_directory/$archive_name";
 }
 
-#sub get_expected_archive_dir_from_spec($) {
-#    my $spec_file = shift;
-#    if(! defined $spec_file) {
-#        oscar_log(5, ERROR, "specfile not defined");
-#        return undef;
-#    }
-#    if(! -f $spec_file) {
-#        oscar_log(5, ERROR, "$spec_file not found");
-#        return undef;
-#    }
-#    if(!open SPEC, "<$spec_file") {
-#        oscar_log(5, ERROR, "Failed to open $spec_file for reading");
-#        return undef;
-#    }
-#
-#    my $cmd = "rpmspec -q $spec_file --queryformat '%{name}-%{version}'";
-#    oscar_log(7, ACTION, "About to run: $cmd");
-#    my $dir_name = `$cmd`;
-#    if ($?) {
-#        oscar_log(5, ERROR, "Failed to query $spec_file");
-#        return undef;
-#    }
-#
-#    return $dir_name;
-#}
-
 sub parse_spec($) {
     my $spec_file = shift;
 
+    if(! defined $spec_file) {
+        oscar_log(5, ERROR, "specfile not defined");
+        return (undef, undef);
+    }
     if (! -f $spec_file) {
         oscar_log(5, ERROR, "$spec_file not found.");
-        return (undef,undef);
+        return (undef, undef);
     }
-    #my $dir_name = get_expected_archive_dir_from_spec($spec_file);
     my $dir_name = basename($spec_file, '.spec'); # Safe default value.
     my $archive_ext = '.tar.gz'; # Safe default value.
 
-    my $cmd = "rpmspec --srpm -q --queryformat '%{SOURCE}' $spec_file";
-    oscar_log(7, ACTION, "About to run: $cmd");
-    my $source = `$cmd`;
-    if ($?) {
-        oscar_log(5, WARNING, "Failed to parse $spec_file. Using default values.");
+    unless (open SPEC, "<$spec_file") {
+        oscar_log(5, ERROR, "Failed to open $spec_file for reading.");
+        return undef;
+    }
+
+    my $source;
+    while ( <SPEC> ) {
+        if ( /^Source[0-9]*:\s*(.*)$/ ) {
+            $source = $1;
+            last;
+        }
+    }
+
+    unless (close (SPEC)) {
+        oscar_log(5, ERROR, "Failed to parse $spec_file (rc=" . $?/256 . ")");
+    }
+
+    if(! defined($source)) {
+        oscar_log(5, WARNING, "No source found in specfile. Using default value: $dir_name.$archive_ext.");
         return($dir_name,$archive_ext);
     }
+
     chomp($source);
+
+    # At this point, we have the source, but it can be of the form %{name}-%{version}.tar.bz2
+    # So now, we need to run rpm spec interpretter to fix that.
+
+	my $query_spec_cmd = "rpmspec -q ";
+
+	# rpmspec is the replacement of rpm -q --specfile. Fallback to old method
+	# if rpmspec not yet available. (assuming that rpmspec is always located at /usr/bin)
+	$query_spec_cmd = "rpm -q --specfile " if ( ! -x '/usr/bin/rpmspec') ;
+
+    $query_spec_cmd .= "--queryformat '$source\\n' $spec_file";
+    oscar_log(7, ACTION, "About to run: $query_spec_cmd");
+    unless (open(PARSE, "$query_spec_cmd |")) {
+        oscar_log(5, ERROR, "Unable to parse $spec_file");
+        oscar_log(5, WARNING, "Unable to retreive source filename from $spec_file. Using default value: $dir_name.$archive_ext.");
+        return($dir_name,$archive_ext);
+    }
+
+    $source = <PARSE>; # Read only the 1st line (the relevant one).
+
+    unless (close (PARSE)) {
+        oscar_log(5, ERROR, "Failed to parse $spec_file (rc=" . $?/256 . ")");
+        # next regexp test will check if we can still continue.
+        # is source doesn't have lua variables, we may have a valind source-file name.
+    }
+    chomp($source);
+
+    if($source =~ /.*%.*/) {
+        oscar_log(5, ERROR, "Failed to evaluate '$source' using $spec_file. Using default value: $dir_name.$archive_ext.");
+        return($dir_name,$archive_ext);
+    }
 
     if($source =~ /^(.*)(.tar.xz|.tar.bz2|.tar.gz|.tar.Z|.tar|.zip)$/) {
         $archive_ext = $2;
         $dir_name = basename($1,(".tar.xz", ".tar.bz2", ".tar.gz", ".tar.Z", ".tar", ".zip"));
     } else {
-        oscar_log(5, ERROR, "Unable to find Source: from $spec_file. Using default values.");
+        oscar_log(5, ERROR, "Found '$source' as source file, but it doesn't seems to be an archive. Using default values: $dir_name.$archive_ext.");
         return ($dir_name,$archive_ext);
     }
 
