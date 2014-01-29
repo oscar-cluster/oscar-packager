@@ -609,16 +609,16 @@ sub do_packaging ($$) {
     @main_failed_comp = create_package ($cpts, $precmds);
     if (scalar (@main_failed_comp) > 0) {
         oscar_log(1, SUBSECTION, "Errors occured during the creation of OSCAR packages.");
-        oscar_log(1, ERROR, "Failed builds are: @main_failed_comp");
+        oscar_log(1, ERROR, "Package that fail to build are: \n - " . join ("\n - ", @main_failed_comp));
     }
 
     # We now create the meta-package for all core OPKGs.
     if (-f $opkg_conffile) {
         @meta_failed_comp = create_opkgs_metapkg ($ocpts);
         if (scalar (@meta_failed_comp) > 0) {
-            oscar_log(1, SUBSECTION, "Errors occured during the creation of OSCAR meta-packages");
-            oscar_log(5, ERROR, "Failed builds are: @meta_failed_comp");
             @meta_failed_comp = map {"opkg-" . $_} @meta_failed_comp;
+            oscar_log(1, SUBSECTION, "Errors occured during the creation of OSCAR meta-packages");
+            oscar_log(5, ERROR, "Package that fail to build are: \n - " . join("\n - ", @meta_failed_comp));
         }
     } else {
         oscar_log(1, INFO, "No configuration for OPKGs found, skipping that step ".
@@ -629,7 +629,7 @@ sub do_packaging ($$) {
     @failed_comp = ( @main_failed_comp , @meta_failed_comp );
     if (scalar (@failed_comp) > 0) {
             oscar_log(1, SECTION, "Errors occured during the creation of packages");
-            oscar_log(1, ERROR, "Failed builds are: @failed_comp");
+            oscar_log(1, ERROR, "Failed builds are:\n - " . join("\n - ", @failed_comp));
     }
     return @failed_comp;
 }
