@@ -1,3 +1,6 @@
+1.2.1:
+- [ol] bugfix release
+- [ol] New function set_built_status to enable / disable built status.
 1.2.0:
 - [ol] Major rewrite of the build algorythm. No more duplicated build.
   [ol] Now oscar-packager can build a package the same way on deb and on rpm
