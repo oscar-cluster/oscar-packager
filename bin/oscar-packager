@@ -451,7 +451,6 @@ sub create_package ($$) {
                     set_failed (\@failed_comp, $c);
                     next;
                 }
-                $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
                 if (run_build_and_move($cmd,$pkg_destdir)) {
                     set_failed (\@failed_comp, $c);
                     next;
