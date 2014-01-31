@@ -169,7 +169,7 @@ sub create_opkgs_metapkg ($) {
     my @failed_comp;
 
 
-    oscar_log(1, SUBSECTION, "Creating OPKG meta-packages");
+#    oscar_log(1, SUBSECTION, "Creating OPKG meta-packages");
 
     $pkg_destdir = get_pkg_dest ();
     if (!defined $pkg_destdir) {
@@ -177,6 +177,12 @@ sub create_opkgs_metapkg ($) {
         return "Unable to get the destination for packages";
     }
 
+    my $os = OSCAR::OCA::OS_Detect::open();
+    if (!defined $os) {
+        oscar_log(5, ERROR, "Unable to detect the binary package format");
+        # FIXME: should return an array of errors, not a string.
+        return "OS not detected";
+    }
 
     my $cmd;
     foreach my $c (keys %$cpts) {
@@ -192,27 +198,47 @@ sub create_opkgs_metapkg ($) {
         # Check to see if the package is already built or not
         # If not, go ahead. Otherwise, move on to the next
         elsif(is_built($c, $category) and !$force){
-            oscar_log(1, INFO, "The packages (opkg-$c opkg-$c-client opkg-$c-server) are already built.");
+            oscar_log(1, SUBSECTION, "[$category:$c] $os->{pkg}s are already built.");
             next;
         }
 
 
-        oscar_log(1, INFO, "Building $c OPKGs...");
+        oscar_log(1, INFO, "Building [$category:$c] OPKG $os->{pkg}s...");
         my $source = $$cpts{$c};
         my ($method, $url) = split (",", $source);
-        if ($method eq "svn") {
+        if ($method eq OSCAR::Defs::SVN()) {
             # We check out SVN
             $cmd = "cd $packaging_dir; svn co $url opkg-$c";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
             if (oscar_system $cmd) {
                 oscar_log(1, ERROR, "Failed to build $c");
-                push (@failed_comp, $c);
+                set_failed (\@failed_comp, $c, $category);
+                # Failed to retreive the source... next and avoid marking the package as built.
+                next;
+            }
+        } elsif ($method eq GIT()) {
+            # We check out GIT
+            $cmd = "cd $packaging_dir; git clone $url opkg-$c";
+            $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
+            if (oscar_system $cmd) {
+                oscar_log(1, ERROR, "Failed to build $c");
+                set_failed (\@failed_comp, $c, $category);
+                # Failed to retreive the source... next and avoid marking the package as built.
+                next;
+            }
+        } elsif ($method eq MERCURIAL()) {
+            # We check out GIT
+            $cmd = "cd $packaging_dir; hg clone $url opkg-$c";
+            $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
+            if (oscar_system $cmd) {
+                oscar_log(1, ERROR, "Failed to build $c");
+                set_failed (\@failed_comp, $c, $category);
                 # Failed to retreive the source... next and avoid marking the package as built.
                 next;
             }
         } else {
             oscar_log(1, ERROR, "Unknown method to access source ($method)");
-            push (@failed_comp, $c);
+            set_failed (\@failed_comp, $c, $category);
             # Don't know how to retreive the source. next and avoid marking the package as built.
             next;
         }
@@ -221,13 +247,15 @@ sub create_opkgs_metapkg ($) {
         require OSCAR::PackagePath;
         my $distro_id = OSCAR::PackagePath::get_distro ();
         if (!OSCAR::Utils::is_a_valid_string ($distro_id)) {
-            # FIXME: should return an array of failed comp
-            return "Unable to get the distro ID";
+            set_failed (\@failed_comp, $c, $category);
+            oscar_log(5, ERROR, "Unable to get the distro ID");
+            next;
         }
         my $compat_id = OSCAR::PackagePath::get_compat_distro ($distro_id);
         if (!OSCAR::Utils::is_a_valid_string ($compat_id)) {
-            # FIXME: should return an array of failed comp
-            return "Unable to detect the compat distro ($distro_id)";
+            set_failed (\@failed_comp, $c, $category);
+            oscar_log(5, ERROR, "Unable to detect the compat distro ($distro_id)");
+            next;
         }
         my ($compat_dist, @trash) = split ("-", $compat_id);
         $cmd = "cd $packaging_dir/opkg-$c;";
@@ -239,24 +267,26 @@ sub create_opkgs_metapkg ($) {
         OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
         if (oscar_system ($cmd)) {
             oscar_log(1, ERROR, "Failed to build opkg-$c ($cmd)");
-            push (@failed_comp, "opkg-$c");
+            set_failed (\@failed_comp, $c, $category);
             # Failed to build the package, go to next
             next;
         }
 
-        # Build successfull. Mark it as built in /etc/oscar/oscar-packager/.oscar_pkgs
-        my $timestamp = localtime;
-        my $str = "$category:$c";
-        if($force or is_built($c, "$category")){
-            oscar_system("sed -i \"/$str/d\" $built_pkgs");
-        }
+#        # Build successfull. Mark it as built in /etc/oscar/oscar-packager/.oscar_pkgs
+#        my $timestamp = localtime;
+#        my $str = "$category:$c";
+#        if($force or is_built($c, "$category")){
+#            oscar_system("sed -i \"/$str/d\" $built_pkgs");
+#        }
+#
+#        open PKG, ">>$built_pkgs";
+#        $str .= (" " x (50 - length($str)));
+#        print PKG "$str:$timestamp\n";
+#        close PKG;
 
-        open PKG, ">>$built_pkgs";
-        $str .= (" " x (50 - length($str)));
-        print PKG "$str:$timestamp\n";
-        close PKG;
-
-        oscar_log(1, INFO, "$c OPKGs successfully built.");
+        # Here, we are in a SUCCESS situation. time to mark package as successfully built.
+        set_built_status($c, $category, 1);
+        oscar_log(1, INFO, "[$category:$c] $os->{pkg}s successfully built.");
 
         # once the opkg is built, remove its source tarball.
         oscar_system("rm -f $pkg_destdir/opkg-$c-*.tar.gz");
@@ -268,7 +298,6 @@ sub create_opkgs_metapkg ($) {
     $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 1);
     if (oscar_system($cmd)) {
         oscar_log(1, ERROR, "Failed to update repo: $pkg_destdir");
-        #push (@failed_comp, $cmd);
     } else {
         oscar_log(2, INFO, "$pkg_destdir repo index has been updated");
     }
@@ -312,10 +341,9 @@ sub sanity_check () {
 # TODO: Reenable build in /etc/oscar/oscar-packager/.oscar_pkgs
 sub set_failed($$$) {
     my ($failed_comp_p, $package, $category) = @_;
-    push(@$failed_comp_p, $package);
-    oscar_log(1, ERROR, "[$package] build failed.");
+    push(@$failed_comp_p, "$category:$package");
+    oscar_log(1, ERROR, "[$category:$package] build failed.");
     set_built_status($package, $category, 0);
-    # TODO: removed correct entry in /etc/oscar/oscar-packager/.oscar_pkgs
 }
 
 # Return: an array of errors (most of the time the OPKG for each the failure
@@ -349,6 +377,7 @@ sub create_package ($$) {
     my $file_type;
     my $filename;
     foreach my $c (keys %$cpts) {
+        chdir "/tmp"; # Make sure we are in /tmp (pkgdir_cleanup set cwd to /tmp)
 
         # oscar-packager takes opkgs, stable, unstable, and a package name as
         # a parameter of --all or --included.
@@ -360,18 +389,40 @@ sub create_package ($$) {
         # Check to see if the package is already built or not
         # If not, go ahead. Otherwise, move on to the next
         elsif(is_built($c, $category) and !$force){
-            oscar_log(1, INFO, "The package ($c) is already built.");
+            oscar_log(1, SUBSECTION, "[$category:$c] is already built.");
             next;
         }
 
+        oscar_log(1, SUBSECTION, "Building [$category:$c] $os->{pkg} package(s)");
 
-        oscar_log(1, SUBSECTION, "Building $c $os->{pkg} package(s)");
         my $source = $$cpts{$c};
         my ($method, $url) = split (",", $source);
-        if ($method eq "svn") {
+        if ($method eq OSCAR::Defs::SVN()) {
             # We check out SVN
             $file_type = OSCAR::Defs::SVN();
             $cmd = "cd $packaging_dir; svn co $url $c";
+            $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 10);
+            if (oscar_system $cmd) {
+                oscar_log(1, ERROR, "Failed to retreived $c source. Can't build $c.");
+                set_failed (\@failed_comp, $c, $category);
+                # No source: stop here. Go to next package.
+                next;
+            }
+        } elsif ($method eq OSCAR::Defs::GIT()) {
+            # We check out GIT
+            $file_type = OSCAR::Defs::GIT();
+            $cmd = "cd $packaging_dir; git clone $url $c";
+            $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 10);
+            if (oscar_system $cmd) {
+                oscar_log(1, ERROR, "Failed to retreived $c source. Can't build $c.");
+                set_failed (\@failed_comp, $c, $category);
+                # No source: stop here. Go to next package.
+                next;
+            }
+        } elsif ($method eq OSCAR::Defs::MERCURIAL()) {
+            # We check out GIT
+            $file_type = OSCAR::Defs::MERCURIAL();
+            $cmd = "cd $packaging_dir; git clone $url $c";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 10);
             if (oscar_system $cmd) {
                 oscar_log(1, ERROR, "Failed to retreived $c source. Can't build $c.");
@@ -443,8 +494,9 @@ sub create_package ($$) {
             }
         }
 
-        my $current_dir = cwd();
+        # We enter into the source tree of the package to build.
         chdir "$packaging_dir/$c";
+
         # We check if a precommand specified by the user needs to be executed
         my $precmd = $$precmds{$c};
         if (defined ($precmd)) {
@@ -460,16 +512,20 @@ sub create_package ($$) {
         # Now we're ready to try to build the package.
         oscar_log(1, INFO, "Building packages for $c.");
         if ($os->{pkg} eq "deb") {
-            if ($file_type eq OSCAR::Defs::SVN() 
-                || $file_type eq OSCAR::Defs::TARBALL()) {
-                if (-f "$packaging_dir/$c/debian/changelog") {
+            if ($file_type eq OSCAR::Defs::SVN() ||
+                $file_type eq OSCAR::Defs::GIT() ||
+                $file_type eq OSCAR::Defs::MERCURIAL() ||
+                $file_type eq OSCAR::Defs::TARBALL()) {
+                if (-f "debian/changelog") {
                     $cmd = "dpkg-buildpackage -b -uc -us ;";
-                } elsif (-f "$packaging_dir/$c/Makefile") {
+                } elsif (-f "Makefile") {
                     $cmd = "make deb UNSIGNED_OSCAR_PKG=1";
                 } else {
-                    oscar_log(1, ERROR, "No build instruction for $c: (build.cfg, spec/debian, Makefile)");
-                    $cmd = "echo 'WARNING: No build instruction for $c.'";
-                    set_failed (\@failed_comp, $c, $category);
+                    oscar_log(1, WARNING, "No deb have been generated for package $c. (No build instructions)");
+                    oscar_log(5, WARNING, " *** No build.cfg, no ./debian dir, no Makefile ***. Not yet supported?");
+                    # No way to build package, we stop here.
+                    # Do not set the package as failed, but also don't mark it as built. => next!
+                    #set_failed (\@failed_comp, $c, $category);
                     next;
                 }
                 if (run_build_and_move($cmd,$pkg_destdir)) {
@@ -484,20 +540,22 @@ sub create_package ($$) {
                 next;
             }
         } elsif ($os->{pkg} eq "rpm") {
-            if ($file_type eq OSCAR::Defs::SVN()
-                   || $file_type eq OSCAR::Defs::TARBALL()) {
+            if ($file_type eq OSCAR::Defs::SVN() ||
+                $file_type eq OSCAR::Defs::GIT() ||
+                $file_type eq OSCAR::Defs::MERCURIAL() ||
+                $file_type eq OSCAR::Defs::TARBALL()) {
                 # 1st: do we have a spec file?
-                my @spec_files = glob("$packaging_dir/$c/*.spec");
+                my @spec_files = glob("*.spec");
                 my $tarball;
                 my $spec_file;
                 if(scalar(@spec_files) == 0) { # maybe in the rpm dir?
-                    @spec_files = glob("$packaging_dir/$c/rpm/*.spec");
+                    @spec_files = glob("rpm/*.spec");
                 }
                 if(scalar(@spec_files) == 0) {
                     oscar_log(5, INFO, "No spec file found, trying next build methd");
                 } else {
                     $spec_file=$spec_files[0]; # Use the 1st one.
-                    $tarball = build_tarball_from_dir_spec("$packaging_dir/$c", $spec_file);
+                    $tarball = build_tarball_from_dir_spec(".", $spec_file);
                 }
                 # If we come from a tarball, and there is a spec file in it, we have just recreated a tarball,
                 # but at least, we are sure that the tarball name and top dir are correctly named and are
@@ -511,24 +569,24 @@ sub create_package ($$) {
                         next;
                         # Package build failed, we stop here.
                     } # else: SUCCESS.
-                } else { # no spec file? Then we try a Makefile....
-                    if (-f "$packaging_dir/$c/Makefile") {
-                        $cmd = "make rpm";
-                        oscar_log(4, INFO, "Building $c rpm package using Makefile.");
-                        if(run_build_and_move($cmd,$pkg_destdir)) {
-                            oscar_log(1, ERROR, "No rpms have been generated for package $c.");
-                            set_failed (\@failed_comp, $c, $category);
-                            next;
-                            # Package build failed, we stop here.
-                        } # else SUCCESS.
-                    } else { # No spec file, no makefile. => don't know how to build a rpm.
+                } elsif (-f "Makefile") { # no spec file? Then we try a Makefile....
+                    $cmd = "make rpm";
+                    oscar_log(4, INFO, "Building $c rpm package using Makefile.");
+                    if(run_build_and_move($cmd,$pkg_destdir)) {
                         oscar_log(1, ERROR, "No rpms have been generated for package $c.");
-                        oscar_log(5, ERROR, "       No spec file, no Makefile. What did you expect?");
                         set_failed (\@failed_comp, $c, $category);
                         next;
-                        # No way to build package, we stop here.
-                    }
+                        # Package build failed, we stop here.
+                    } # else SUCCESS.
+                } else { # No spec file, no makefile. => don't know how to build a rpm.
+                    oscar_log(1, WARNING, "No rpms have been generated for package $c. (No build instructions)");
+                    oscar_log(5, WARNING, " *** No build.cfg, no spec file, no Makefile ***. Not yet supported?");
+                    # No way to build package, we stop here.
+                    # Do not set the package as failed, but also don't mark it as built. => next!
+                    #set_failed (\@failed_comp, $c, $category);
+                    next;
                 }
+                # Here, we are in a SUCCESS situation.
             } elsif ($file_type eq OSCAR::Defs::SRPM()) {
                 $cmd = "rpmbuild --rebuild $filename";
                 if (run_build_and_move($cmd,$pkg_destdir)) {
@@ -550,12 +608,10 @@ sub create_package ($$) {
             next;
         }
 
-        chdir "$current_dir" if(defined($current_dir));
-
         # Here, we are in a SUCCESS situation. time to mark package as successfully built.
         set_built_status($c, $category, 1);
 
-        oscar_log(1, INFO, "[$c] $os->{pkg}(s) successfully built.");
+        oscar_log(1, INFO, "[$category:$c] $os->{pkg}(s) successfully built.");
     }
 
     $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
@@ -620,19 +676,19 @@ sub do_packaging ($$) {
     my $ocpts =  parse_config($opkg_conffile, "source");
 
     @main_failed_comp = create_package ($cpts, $precmds);
-    if (scalar (@main_failed_comp) > 0) {
-        oscar_log(1, SUBSECTION, "Errors occured during the creation of OSCAR packages.");
-        oscar_log(1, ERROR, "Package that fail to build are: \n - " . join ("\n - ", @main_failed_comp));
-    }
+#    if (scalar (@main_failed_comp) > 0) {
+#        oscar_log(1, SUBSECTION, "Errors occured during the creation of OSCAR packages.");
+#        oscar_log(1, ERROR, "Package that fail to build are: \n - " . join ("\n - ", @main_failed_comp));
+#    }
 
     # We now create the meta-package for all core OPKGs.
     if (-f $opkg_conffile) {
         @meta_failed_comp = create_opkgs_metapkg ($ocpts);
-        if (scalar (@meta_failed_comp) > 0) {
-            @meta_failed_comp = map {"opkg-" . $_} @meta_failed_comp;
-            oscar_log(1, SUBSECTION, "Errors occured during the creation of OSCAR meta-packages");
-            oscar_log(5, ERROR, "Package that fail to build are: \n - " . join("\n - ", @meta_failed_comp));
-        }
+#        if (scalar (@meta_failed_comp) > 0) {
+#            @meta_failed_comp = map {"opkg-" . $_} @meta_failed_comp;
+#            oscar_log(1, SUBSECTION, "Errors occured during the creation of OSCAR meta-packages");
+#            oscar_log(5, ERROR, "Package that fail to build are: \n - " . join("\n - ", @meta_failed_comp));
+#        }
     } else {
         oscar_log(1, INFO, "No configuration for OPKGs found, skipping that step ".
             "($opkg_conffile)");
@@ -640,10 +696,10 @@ sub do_packaging ($$) {
 
     # Build failed comp sumup.
     @failed_comp = ( @main_failed_comp , @meta_failed_comp );
-    if (scalar (@failed_comp) > 0) {
-            oscar_log(1, SECTION, "Errors occured during the creation of packages");
-            oscar_log(1, ERROR, "Failed builds are:\n - " . join("\n - ", @failed_comp));
-    }
+#    if (scalar (@failed_comp) > 0) {
+#            oscar_log(1, SECTION, "Errors occured during the creation of packages");
+#            oscar_log(1, ERROR, "Failed builds are:\n - " . join("\n - ", @failed_comp));
+#    }
     return @failed_comp;
 }
 
@@ -678,7 +734,7 @@ sub package_type($$$$) {
 
     @failed_comp = do_packaging ($config_file, $opkg_conffile);
 
-    @failed_comp = map { "$type: " . $_ } @failed_comp;
+#    @failed_comp = map { "$type: " . $_ } @failed_comp;
     return @failed_comp;
 }
 

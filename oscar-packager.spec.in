@@ -31,6 +31,12 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Thu Jan 31 2014 Olivier Lahaye <olivier.lahaye@cea.fr> 1.2.2-1
+- New version.
+* Thu Jan 30 2014 Olivier Lahaye <olivier.lahaye@cea.fr> 1.2.1-1
+- New version.
+* Wed Jan 29 2014 Olivier Lahaye <olivier.lahaye@cea.fr> 1.2.0-1
+- New version.
 * Fri Jan 24 2014 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.2-1
 - New version.
 * Sun Dec 15 2013 Olivier Lahaye <olivier.lahaye@cea.fr> 1.1.1-2
