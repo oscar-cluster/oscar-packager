@@ -552,7 +552,7 @@ sub create_package ($$) {
                     @spec_files = glob("rpm/*.spec");
                 }
                 if(scalar(@spec_files) == 0) {
-                    oscar_log(5, INFO, "No spec file found, trying next build methd");
+                    oscar_log(5, INFO, "No spec file found, trying next build method");
                 } else {
                     $spec_file=$spec_files[0]; # Use the 1st one.
                     $tarball = build_tarball_from_dir_spec(".", $spec_file);
