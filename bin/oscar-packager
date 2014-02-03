@@ -33,7 +33,6 @@ use Cwd;
 use warnings "all";
 
 my ($all, $core, $included, $force, $opkgs, $debug, $verbose, $quiet, $available_releases, $unsigned);
-#our $verbose=0;
 
 $opkgs = 1;
 use vars qw ($pkg_destdir);
@@ -45,6 +44,7 @@ GetOptions(
         "core=s"                            => \$core,
         "included=s"                        => \$included,
         "force"                             => \$force,
+        "ignore-nobuild"                    => \$OSCAR::Packager::force_nobuild,
         "supported-releases"                => \$available_releases,
         "unsigned-packages"                 => \$unsigned,
         "verbose"                           => \$verbose,
@@ -78,11 +78,6 @@ if ($debug) {
     $OSCAR::Env::oscar_verbose = 10;
     $verbose=10;
 }
-
-# Propagate the verbose and debug switches.
-#$OSCAR::Packager::verbose = $verbose;
-#$OSCAR::Packager::debug = $debug;
-#$OSCAR::FileUtils::verbose = $verbose;
 
 sub pkgdir_cleanup () {
     # Avoid being in $packagin_dir before removing it.
@@ -271,18 +266,6 @@ sub create_opkgs_metapkg ($) {
             # Failed to build the package, go to next
             next;
         }
-
-#        # Build successfull. Mark it as built in /etc/oscar/oscar-packager/.oscar_pkgs
-#        my $timestamp = localtime;
-#        my $str = "$category:$c";
-#        if($force or is_built($c, "$category")){
-#            oscar_system("sed -i \"/$str/d\" $built_pkgs");
-#        }
-#
-#        open PKG, ">>$built_pkgs";
-#        $str .= (" " x (50 - length($str)));
-#        print PKG "$str:$timestamp\n";
-#        close PKG;
 
         # Here, we are in a SUCCESS situation. time to mark package as successfully built.
         set_built_status($c, $category, 1);
@@ -478,6 +461,8 @@ sub create_package ($$) {
         } elsif($rc > 0) {
             oscar_log(1, INFO, "[$c] $os->{pkg}(s) successfully built.");
             set_built_status($c, $category, 1);
+            # We update the repo, so the freshly built package can be sued as a depbuild in next one.
+            update_repo($pkg_destdir);
             next;
         } # else $rc == 0, we still haven't attempted to build the package, so we continue.
 
@@ -609,21 +594,12 @@ sub create_package ($$) {
         }
 
         # Here, we are in a SUCCESS situation. time to mark package as successfully built.
+        oscar_log(1, INFO, "[$category:$c] $os->{pkg}(s) successfully built.");
         set_built_status($c, $category, 1);
 
-        oscar_log(1, INFO, "[$category:$c] $os->{pkg}(s) successfully built.");
+        # We update the repo, so the freshly built package can be sued as a depbuild in next one.
+        update_repo($pkg_destdir);
     }
-
-    $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
-    $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 5);
-    $cmd .= " --verbose" if ($OSCAR::Env::oscar_verbose >= 5);
-    if (oscar_system($cmd)) {
-        oscar_log(1, ERROR, "Failed to update repository indexes.");
-    } else {
-        oscar_log(2, INFO, "$pkg_destdir repo index has been updated");
-    }
-
-    return @failed_comp;
 }
 
 sub help () {
@@ -772,6 +748,13 @@ read_built_pkgs_file();
 
 oscar_log(1, SECTION, "OSCAR Packager Starting...");
 
+if ( ! defined $all &&
+     ! defined $core &&
+     ! defined $included) {
+    oscar_log(1, ERROR, "Missing --all or --core or --included option");
+    help_and_die();
+}
+
 # $all, $core, $included contain the version to package
 # ???? or the name of the package to build ???.
 if ($all) {
@@ -837,6 +820,14 @@ Package a given release of the OSCAR core. To package the development version, u
 
 Package a given release of the OSCAR included OPKGs. To package the development version, use "unstable" as VERSION.
 
+=item --force
+
+Force build of package that are already tagged as built.
+
+=item --ignore-nobuild
+
+Ignore the nobuild: tag in build.cfg and tries to build the package anyway.
+
 =item --supported-releases
 
 Give the list of OSCAR releases that can be packaged.
@@ -867,8 +858,9 @@ Since specifying a package name means that you really want to build that one, it
 =item oscar-packager --included unstable --force
 Build all the included packages and opkgs in the unstable category no matther whether they have already been built or not.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 Geoffroy Vallee, Oak Ridge National Laboratory <valleegr at ornl dot gov>
+Olivier Lahaye, Commissariat a l'Energie Atomique et aux Energies Alternatives <olivier dot lahaye at cea dot fr>
 
 =cut

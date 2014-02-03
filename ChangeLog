@@ -1,3 +1,10 @@
+1.2.3:
+- [ol] Add support for "nobuild: <reason>" in build.cfg to disable a build for a
+specific distro.
+- [ol] Add --ignore-nobuild to force build of disabled packages.
+- [ol] Now rebuild the repo indexes at each successfull package built so
+- [ol] Now check that at least we have --all or --core or --included
+freshly built packages can be used in next pkg requires:
 1.2.2:
 - [ol] Do not fail when no instruction to build is available.
 - [ol] Make opkg build log similar to package build log.

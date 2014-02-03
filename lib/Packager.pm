@@ -50,6 +50,8 @@ use OSCAR::LoggerDefs;
 use OSCAR::OCA::OS_Detect;
 use OSCAR::Utils;
 
+our $force_nobuild;
+
 @EXPORT = qw(
             available_releases
             package_opkg
@@ -57,6 +59,7 @@ use OSCAR::Utils;
             run_build_and_move
             parse_spec
             build_tarball_from_dir_spec
+            force_nobuild
             );
 
 our $verbose=0;
@@ -189,6 +192,12 @@ sub split_config {
                     $conf->{env} .= " $data";
                 } else {
                     $conf->{env} = $data;
+                }
+            } elsif($cmd =~ /^nobuild:/) {
+                if (exists($conf->{nobuild})) {
+                    $conf->{nobuild} .= " $data";
+                } else {
+                    $conf->{nobuild} = $data;
                 }
             } elsif($cmd !~ /:$/) {
                 $conf->{dist}{"$cmd"}{opt} = $data;
@@ -892,6 +901,17 @@ sub build_binaries ($$$) {
     for my $cblock (@conf_blocks) {
         my %conf = %{$cblock};
 
+        if ( defined $conf{nobuild} ) {
+            if ( ! defined $OSCAR::Packager::force_nobuild ) {
+                oscar_log(1, WARNING, "Skipping build:$conf{nobuild}");
+                # We return one successfull build so oscar-packager don't try other build method.
+                return 1;
+            } else { # --ignore-nobuild is used. => We continue build process.
+                oscar_log(1, INFO, "IGNORING 'nobuild:$conf{nobuild}'");
+                # We do not return. We continue normal process just like of the nobuild tag was not present.
+            }
+        }
+
         # install requires
         if (install_requires($conf{requires})) {
             oscar_log(5, ERROR, "Failed to install requirements");
@@ -1158,6 +1178,19 @@ sub parse_spec($) {
     return ($dir_name,$archive_ext);
 }
 
+sub update_repo($) {
+    my $pkg_destdir = shift;
+    my $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
+    $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 5);
+    $cmd .= " --verbose" if ($OSCAR::Env::oscar_verbose >= 5);
+    if (oscar_system($cmd)) {
+        oscar_log(1, ERROR, "Failed to update repository indexes.");
+    } else {
+        oscar_log(2, INFO, "$pkg_destdir repo index has been updated");
+    }
+}
+
+1;
 __END__
 
 =head1 Exported functions
