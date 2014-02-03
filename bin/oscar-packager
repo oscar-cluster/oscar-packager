@@ -600,6 +600,7 @@ sub create_package ($$) {
         # We update the repo, so the freshly built package can be sued as a depbuild in next one.
         update_repo($pkg_destdir);
     }
+    return(@failed_comp);
 }
 
 sub help () {
