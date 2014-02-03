@@ -60,6 +60,7 @@ our $force_nobuild;
             parse_spec
             build_tarball_from_dir_spec
             force_nobuild
+            update_repo
             );
 
 our $verbose=0;
