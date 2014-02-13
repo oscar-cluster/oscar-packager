@@ -1,3 +1,5 @@
+1.2.4:
+- [ol] BUGFIX: Removed duplicate switcher entry in included_opkgs_unstable.cfg
 1.2.3:
 - [ol] Add support for "nobuild: <reason>" in build.cfg to disable a build for a
 specific distro.
