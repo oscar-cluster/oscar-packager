@@ -835,14 +835,39 @@ sub install_requires {
     oscar_log (5, INFO, "Requires: ".join(" ",@reqs));
 
     my @install_stack;
+    # OL: Now we get the real package to install. We remove the opkg reference.
+    # a requires: rule can be: either opkg:required_package or simply required_package
+    # a required_package can be a real package, a virtual package (from provides:)
+    # it is named a "capability".
+    # example perl(Text::HTML). We need to handle the following requirement examples:
+    # real package name (or virtual package name)
+    #   1 - fobbar
+    # same as above but for a specific oscar package
+    #   2 - opkg:foobar
+    # a feature
+    #   3 - perl(Foo::Bar)
+    # same as above but for a specific opkg
+    #   4 - opkg:perl(Foo::Bar)
+    # For now, we only keep the right side.
+    my $opkg;
+    my $pkg;
     for my $r (@reqs) {
-        if ($r =~ /^(.*):(.*)$/) {
+        if ($r =~ /^(.*):(\w\(.+\).*)$/) { # opkg:capability(Foo::Bar)
+            $opkg = $1;
+            $pkg = $2;
+        } elsif ($r =~ /^(\w\(.+\).*)$/) { # capability(Foo::Bar)
+            $opkg = undef;
+            $pkg = $1;
+        } elsif ($r =~ /^(.*):(.*)$/) { # opkg:capability
             my $opkg = $1;
             my $pkg = $2;
-            push (@install_stack, $pkg);
-        } else {
-            push (@install_stack, $r);
+        } else {                        # capability
+            $opkg = undef;
+            $pkg = $r;
         }
+        # OL: $opkg is not used here. Maybe elsewhere? obsolete?
+        # anyway, we keep compatibility for build.cfg that use this opkg:* syntax.
+        push (@install_stack, $pkg);
     }
     if (!$test) {
         my %before;
