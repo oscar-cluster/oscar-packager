@@ -852,16 +852,14 @@ sub install_requires {
     my $opkg;
     my $pkg;
     for my $r (@reqs) {
-        if ($r =~ /^(.*):(\w\(.+\).*)$/) { # opkg:capability(Foo::Bar)
+        if ($r =~ /^(\w):(.+)$/) { #    opkg:capability(Foo::Bar)
+                                   # or opkg:capability(Foo::Bar)-version
+                                   # or opkg:capability
             $opkg = $1;
             $pkg = $2;
-        } elsif ($r =~ /^(\w\(.+\).*)$/) { # capability(Foo::Bar)
-            $opkg = undef;
-            $pkg = $1;
-        } elsif ($r =~ /^(.*):(.*)$/) { # opkg:capability
-            my $opkg = $1;
-            my $pkg = $2;
-        } else {                        # capability
+        } else {                   #    capability(Foo:Bar)
+                                   # or capability(Foo::Bar)-version
+                                   # or capability
             $opkg = undef;
             $pkg = $r;
         }
