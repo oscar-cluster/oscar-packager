@@ -552,26 +552,27 @@ sub create_binary ($$$$$$) {
         $pre_cmd = "($pre_cmd) >/dev/null 2>/dev/null" if($OSCAR::Env::oscar_verbose < 10);
     }
 
+    # In this situation, the build environment is ready, we can run the precommand if any.
+    if($pre_cmd){
+        if (oscar_system($pre_cmd)) {
+             return -1;
+        }
+    }
+
     my $cmd;
     if ($os->{pkg} eq "rpm") {
         # Set RPMBUILDOPTS according to build.cfg, $name, $os, $sel and $conf.
         my $rpmbuild_options = prepare_rpm_env ($name, $os, $sel, $conf, $basedir);
         if ($source_type eq OSCAR::Defs::SRPM()) {
             oscar_log(4, INFO, "Building RPM from SRPM ".$source_file);
-            # In this situation, the build environment is ready, we can run the precommand if any.
-            if($pre_cmd){
-                if (oscar_system($pre_cmd)) {
-                     return -1;
-                }
-            }
-             $cmd = "";
-             $cmd = "echo TESTMODE:" if($test);
-             $cmd .= "rpmbuild --rebuild $download_dir/$source_file $rpmbuild_options";
-             $ENV{'RPMBUILDOPTS'} = $config_data if (defined ($config_data));
-             if (run_build_and_move($cmd,$output)) {
+            $cmd = "";
+            $cmd = "echo TESTMODE:" if($test);
+            $cmd .= "rpmbuild --rebuild $download_dir/$source_file $rpmbuild_options";
+            $ENV{'RPMBUILDOPTS'} = $config_data if (defined ($config_data));
+            if (run_build_and_move($cmd,$output)) {
                 return -1;
-             }
-             $ENV{'RPMBUILDOPTS'} = "";
+            }
+            $ENV{'RPMBUILDOPTS'} = "";
         } elsif ($source_type eq OSCAR::Defs::TARBALL()) {
             oscar_log(4, INFO, "Building RPM from TARBALL ".$source_file);
             my $build_cmd="rpmbuild";

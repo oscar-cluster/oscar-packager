@@ -1,3 +1,6 @@
+1.2.5:
+- [ol] BUGFIX: precommand in <package>.cfg was not executed if source was not a
+src.rpm. (tarball for rpm and deb)
 1.2.4:
 - [ol] BUGFIX: Removed duplicate switcher entry in included_opkgs_unstable.cfg
 1.2.3:

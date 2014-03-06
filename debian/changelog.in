@@ -2,6 +2,12 @@ oscar-packager (__VERSION__-1) quantal; urgency=low
 
   * New upstream version.
 
+ -- Olivier LAHAYE <olivier.lahaye@cea.fr>  Thu,  6 Mar 2014 18:26:38 +0100
+
+oscar-packager (1.2.3-1) quantal; urgency=low
+
+  * New upstream version.
+
  -- Olivier LAHAYE <olivier.lahaye@cea.fr>  Fri, 31 Jan 2014 19:42:44 +0100
 
 oscar-packager (1.2.2-1) quantal; urgency=low
