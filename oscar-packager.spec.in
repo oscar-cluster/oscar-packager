@@ -1,7 +1,7 @@
 Summary:        OSCAR Packaging helpers.
 Name:           oscar-packager
 Version:        __VERSION__
-Release:        2
+Release:        3
 Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
 Distribution:   OSCAR
 Packager:       Olivier Lahaye <olivier.lahaye@cea.fr>
@@ -31,6 +31,8 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Wed May 28 2014 Olivier Lahaye <olivier.lahaye@cea.fr> 1.2.5-3
+- Add support for opkg-naemon.
 * Wed May 28 2014 Olivier Lahaye <olivier.lahaye@cea.fr> 1.2.5-2
 - Add support for naemon.
 * Thu Mar  6 2014 Olivier Lahaye <olivier.lahaye@cea.fr> 1.2.5-1
