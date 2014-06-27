@@ -33,8 +33,7 @@ BEGIN {
 
 use strict;
 use Carp;
-use v5.10.1;
-use Switch 'Perl5', 'Perl6';
+use v5.10.1; # Switch
 # Avoid smartmatch warnings when using given
 no if $] >= 5.017011, warnings => 'experimental::smartmatch';
 use vars qw($VERSION @EXPORT);
@@ -488,14 +487,14 @@ sub create_binary ($$$$$$) {
  
     # SOURCES dir for package.(used for SRC_DIR precommand variable)
     my $src_dir="";
-    switch ( $os->{pkg} ) {
-        case "rpm" { chomp($src_dir = `/bin/rpm --eval %{_sourcedir}`) }
-        case "deb" {
+    given ( $os->{pkg} ) {
+        when ("rpm") { chomp($src_dir = `/bin/rpm --eval %{_sourcedir}`) }
+        when ("deb") {
                        $src_dir="$basedir/debian";
                        mkdir $src_dir if (! -d $src_dir);
                    }
         # If not building rpm or deb, we work in basedir.
-        else { $src_dir="$basedir" }
+        default { $src_dir="$basedir" }
     }
 
     # Now, since we can access the config file, we parse it and download the
