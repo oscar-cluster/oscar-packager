@@ -1,3 +1,11 @@
+1.2.7:
+- [ol] Now clean the PATH variable from all links to avoid bad AutoReqProv
+dependancies in rpm packages on recent distro where /bin and /sbin are links
+to their /usr counterparts. If those links are not filtered, as oscar-packager
+runs as root, a PATH with /sbin:/bin before /usr/sbin:/usr/bin (bashrc and
+sudoers Defaults secure_paths) will lead to /bin/python dep instead of
+/usr/bin/python dependancy. this bad dep will cause yume to fail to upgrade
+python package as it wrongly thinks that /bin/python deps would be broken.
 1.2.6:
 - [ol] Updated unstable.cfg files (netbootmgr in core)
 1.2.5:

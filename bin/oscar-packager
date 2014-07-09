@@ -17,7 +17,19 @@
 # $Id$
 #
 
+# 1st: Cleanup PATH from missleading links (e.g. /bin -> /usr/bin)
 use strict;
+use warnings "all";
+
+my @paths = split(":", $ENV{PATH});
+my @cleaned_path = ();
+for my $p (@paths) {
+    push (@cleaned_path, $p)
+        if ( ! -l $p );
+}
+$ENV{PATH} = join(":", @cleaned_path);
+
+# Now we can init everything.
 use Getopt::Long;
 use OSCAR::Env;
 use OSCAR::Utils;
@@ -30,7 +42,6 @@ use OSCAR::Packager;
 use File::Path;
 use Carp;
 use Cwd;
-use warnings "all";
 
 my ($all, $core, $included, $force, $opkgs, $debug, $verbose, $quiet, $available_releases, $unsigned);
 
