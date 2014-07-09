@@ -1,3 +1,5 @@
+1.2.6:
+- [ol] Updated unstable.cfg files (netbootmgr in core)
 1.2.5:
 - [ol] BUGFIX: precommand in <package>.cfg was not executed if source was not a
 src.rpm. (tarball for rpm and deb)
