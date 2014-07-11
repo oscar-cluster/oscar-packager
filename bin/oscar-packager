@@ -278,23 +278,24 @@ sub create_opkgs_metapkg ($) {
             next;
         }
 
-        # Here, we are in a SUCCESS situation. time to mark package as successfully built.
+        # Here, we are in a SUCCESS situation. time to mark package as successfully built.
         set_built_status($c, $category, 1);
         oscar_log(1, INFO, "[$category:$c] $os->{pkg}s successfully built.");
 
         # once the opkg is built, remove its source tarball.
         oscar_system("rm -f $pkg_destdir/opkg-$c-*.tar.gz");
-        # FIXME: The above command fails for opkg-oscarv-1.0.tar.gz and opkg-ssi-oscar-2.1.1.tar.gz
+        # FIXME: The above command fails for opkg-oscarv-1.0.tar.gz and opkg-ssi-oscar-2.1.1.tar.gz
     }
 
-    $cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
-    $cmd .= " --verbose" if($OSCAR::Env::oscar_verbose >= 5);
-    $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 1);
-    if (oscar_system($cmd)) {
-        oscar_log(1, ERROR, "Failed to update repo: $pkg_destdir");
-    } else {
-        oscar_log(2, INFO, "$pkg_destdir repo index has been updated");
-    }
+    update_repo($pkg_destdir);
+    #$cmd = "cd $pkg_destdir && /usr/bin/packman --prepare-repo $pkg_destdir";
+    #$cmd .= " --verbose" if($OSCAR::Env::oscar_verbose >= 5);
+    #$cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 1);
+    #if (oscar_system($cmd)) {
+    #    oscar_log(1, ERROR, "Failed to update repo: $pkg_destdir");
+    #} else {
+    #    oscar_log(1, INFO, "$pkg_destdir repo index has been updated");
+    #}
     return @failed_comp
 }
 
@@ -472,8 +473,8 @@ sub create_package ($$) {
         } elsif($rc > 0) {
             oscar_log(1, INFO, "[$c] $os->{pkg}(s) successfully built.");
             set_built_status($c, $category, 1);
-            # We update the repo, so the freshly built package can be sued as a depbuild in next one.
-            update_repo($pkg_destdir);
+            # We update the repo, so the freshly built package can be sued as a depbuild in next one.
+            # update_repo($pkg_destdir); # => Update occures when moving files to repo. More efficient.
             next;
         } # else $rc == 0, we still haven't attempted to build the package, so we continue.
 
@@ -608,8 +609,8 @@ sub create_package ($$) {
         oscar_log(1, INFO, "[$category:$c] $os->{pkg}(s) successfully built.");
         set_built_status($c, $category, 1);
 
-        # We update the repo, so the freshly built package can be sued as a depbuild in next one.
-        update_repo($pkg_destdir);
+        # We update the repo, so the freshly built package can be sued as a depbuild in next one.
+        # update_repo($pkg_destdir); # Update occures when package is moved to destdir.
     }
     return(@failed_comp);
 }

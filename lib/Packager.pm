@@ -380,6 +380,7 @@ sub run_build_and_move($$) {
             }
         }
     }
+    update_repo($output);
     return 0
 }
 
@@ -1212,7 +1213,7 @@ sub update_repo($) {
     if (oscar_system($cmd)) {
         oscar_log(1, ERROR, "Failed to update repository indexes.");
     } else {
-        oscar_log(2, INFO, "$pkg_destdir repo index has been updated");
+        oscar_log(1, INFO, "$pkg_destdir repo index has been updated");
     }
 }
 
