@@ -1,3 +1,5 @@
+1.2.9:
+- [ol] Add squid opkg
 1.2.8:
 - [ol] Now update the repo index after each bunch of packages moved to the
 repo. This allows to build deps in the same build.cfg file.
