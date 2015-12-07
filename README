@@ -36,7 +36,7 @@ where 'url' is the URL we just gave for each component, and then run the "sudo
 make install" from the top directory of the source code.
 
 You will also need to install the following debian packages:
-libappconfig-perl fakeroot dpkg-dev debhelper build-essential
+libappconfig-perl dpkg-dev debhelper build-essential
 
 OPKGC, the OSCAR package compiler, is also required. Please install opkgc by
 creating the RPM is installing the RPM, otherwise you may encounter technical

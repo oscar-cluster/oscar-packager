@@ -64,7 +64,7 @@ sub build_deb_pkgs ($$$) {
         return -1;
     }
 
-    $cmd = "cd $dir && dpkg-buildpackage -b -rfakeroot -us -uc";
+    $cmd = "cd $dir && dpkg-buildpackage -b -us -uc";
     OSCAR::Logger::oscar_log_subsection ("Creating the Debian package ($cmd)...");
     if (system ($cmd)) {
         carp "ERROR: Impossible to execute $cmd";

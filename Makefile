@@ -55,7 +55,7 @@ rpm: dist
 
 deb:
 	@sed -e 's/__VERSION__/$(VERSION)/g' debian/changelog.in > debian/changelog
-	@dpkg-buildpackage -rfakeroot -b -uc -us
+	@dpkg-buildpackage -b -uc -us
 	@if [ -n "$(PKGDEST)" ]; then \
 		FILES=../oscar-packager*.deb ;\
 		echo "Moving file(s) ($$FILES) to $(PKGDEST)"; \
