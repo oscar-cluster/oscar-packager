@@ -4,11 +4,12 @@ TOPDIR=..
 include $(TOPDIR)/Config.mk
 
 SCRIPTS := oscar-packager build_rpms build_package
+POD_FILES := oscar-packager build_package
 SUBDIRS := 
 
 doc:
 	install -d -m 0755 $(DESTDIR)$(MANDIR)/man1/
-	for bin in ${SCRIPTS} ; do ( pod2man --section=1 $$bin $(DESTDIR)$(MANDIR)/man1/$$bin.1 ) ; done
+	for bin in ${POD_FILES} ; do ( pod2man --section=1 $$bin $(DESTDIR)$(MANDIR)/man1/$$bin.1 ) ; done
 
 all:
 	for dir in ${SUBDIRS} ; do ( cd $$dir ; ${MAKE} all ) ; done

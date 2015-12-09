@@ -861,6 +861,8 @@ Display even more output than when using the verbose option.
 
 =head1 EXAMPLES
 
+=over 8
+
 =item oscar-packager --all stable_6.1.2
 Build all the packages and opkgs in the stable_6.1.2 category. If the packages have already been built, they would not be re-built unless the "--force" option is applied.
 
@@ -870,6 +872,8 @@ Since specifying a package name means that you really want to build that one, it
 
 =item oscar-packager --included unstable --force
 Build all the included packages and opkgs in the unstable category no matther whether they have already been built or not.
+
+=back
 
 =head1 AUTHORS
 
