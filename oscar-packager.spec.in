@@ -11,7 +11,7 @@ Source:         %{name}-%{version}.tar.gz
 BuildRoot:      %{_localstatedir}/tmp/%{name}-root
 BuildArch:      noarch
 Requires:       wget, oscar-base-lib > 6.1.2r9859, rpm-build, subversion
-Requires:       packman, opkgc
+Requires:       packman, opkgc, createrepo, which
 Requires:       oscar-base-scripts
 
 %description
