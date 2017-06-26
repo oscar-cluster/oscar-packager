@@ -208,10 +208,9 @@ sub create_opkgs_metapkg ($) {
             next;
         }
 
-
         oscar_log(1, INFO, "Building [$category:$c] OPKG $os->{pkg}s...");
         my $source = $$cpts{$c};
-        my ($method, $url) = split (",", $source);
+        my ($method, $url, $subpath) = split (",", $source);
         if ($method eq OSCAR::Defs::SVN()) {
             # We check out SVN
             $cmd = "cd $packaging_dir; svn co $url opkg-$c";
@@ -222,9 +221,17 @@ sub create_opkgs_metapkg ($) {
                 # Failed to retreive the source... next and avoid marking the package as built.
                 next;
             }
-        } elsif ($method eq GIT()) {
-            # We check out GIT
-            $cmd = "cd $packaging_dir; git clone $url opkg-$c";
+        } elsif ($method eq OSCAR::Defs::GIT()) {
+            # We do sparse checkout in GIT (need git >= 1.7 which is the case since CentOS-6)
+	    # mkdir <repo>
+	    # cd <repo>
+	    # git init
+	    # git remote add -f origin <url>
+	    # git config core.sparseCheckout true
+	    # echo "some/dir/" >> .git/info/sparse-checkout
+	    # echo "another/sub/tree" >> .git/info/sparse-checkout
+	    # git pull origin master
+            $cmd = "mkdir $packaging_dir/opkg-$c; cd $packaging_dir/opkg-$c; git init; git remote add -f origin $url; git config core.sparseCheckout true; echo $subpath >> .git/info/sparse-checkout; git pull origin master";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
             if (oscar_system $cmd) {
                 oscar_log(1, ERROR, "Failed to build $c");
@@ -232,8 +239,8 @@ sub create_opkgs_metapkg ($) {
                 # Failed to retreive the source... next and avoid marking the package as built.
                 next;
             }
-        } elsif ($method eq MERCURIAL()) {
-            # We check out GIT
+        } elsif ($method eq OSCAR::Defs::MERCURIAL()) {
+            # We check out Mercural
             $cmd = "cd $packaging_dir; hg clone $url opkg-$c";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
             if (oscar_system $cmd) {
@@ -264,7 +271,7 @@ sub create_opkgs_metapkg ($) {
             next;
         }
         my ($compat_dist, @trash) = split ("-", $compat_id);
-        $cmd = "cd $packaging_dir/opkg-$c;";
+        $cmd = "cd $packaging_dir/opkg-$c$subpath;";
         $cmd .= "opkgc ";
         $cmd .= " -v" if ($OSCAR::Env::oscar_verbose >=  5);
         $cmd .= " -v" if ($OSCAR::Env::oscar_verbose >= 10);
@@ -391,7 +398,7 @@ sub create_package ($$) {
         oscar_log(1, SUBSECTION, "Building [$category:$c] $os->{pkg} package(s)");
 
         my $source = $$cpts{$c};
-        my ($method, $url) = split (",", $source);
+        my ($method, $url, $subpath) = split (",", $source);
         if ($method eq OSCAR::Defs::SVN()) {
             # We check out SVN
             $file_type = OSCAR::Defs::SVN();
@@ -407,6 +414,7 @@ sub create_package ($$) {
             # We check out GIT
             $file_type = OSCAR::Defs::GIT();
             $cmd = "cd $packaging_dir; git clone $url $c";
+	    $cmd = "mkdir $packaging_dir/$c; cd $packaging_dir/$c; git init; git remote add -f origin $url; git config core.sparseCheckout true; echo $subpath >> .git/info/sparse-checkout; git pull origin master";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 10);
             if (oscar_system $cmd) {
                 oscar_log(1, ERROR, "Failed to retreived $c source. Can't build $c.");
@@ -415,7 +423,7 @@ sub create_package ($$) {
                 next;
             }
         } elsif ($method eq OSCAR::Defs::MERCURIAL()) {
-            # We check out GIT
+            # We check out MERCURIAL
             $file_type = OSCAR::Defs::MERCURIAL();
             $cmd = "cd $packaging_dir; git clone $url $c";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 10);
@@ -465,7 +473,7 @@ sub create_package ($$) {
         # -1 => build was attempted from within prereqs and there was a failure: => abort.
         # 0  => no build attempt was made from prepare_prereqs => we continue.
         # >0 => we had at least one build here: we're ok => next package.
-        my $rc = OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c", $pkg_destdir);
+        my $rc = OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c$subpath", $pkg_destdir);
         if($rc == -1) {
             set_failed (\@failed_comp, $c, $category);
             # Stop here: failed to install dependancies and/or build package.
