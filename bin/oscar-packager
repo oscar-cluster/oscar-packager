@@ -413,7 +413,6 @@ sub create_package ($$) {
         } elsif ($method eq OSCAR::Defs::GIT()) {
             # We check out GIT
             $file_type = OSCAR::Defs::GIT();
-            $cmd = "cd $packaging_dir; git clone $url $c";
 	    $cmd = "mkdir $packaging_dir/$c; cd $packaging_dir/$c; git init; git remote add -f origin $url; git config core.sparseCheckout true; echo $subpath >> .git/info/sparse-checkout; git pull origin master";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 10);
             if (oscar_system $cmd) {
@@ -500,7 +499,7 @@ sub create_package ($$) {
         }
 
         # We enter into the source tree of the package to build.
-        chdir "$packaging_dir/$c";
+        chdir "$packaging_dir/$c$subpath";
 
         # We check if a precommand specified by the user needs to be executed
         my $precmd = $$precmds{$c};
