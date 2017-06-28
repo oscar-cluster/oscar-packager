@@ -628,7 +628,7 @@ sub create_binary ($$$$$$) {
             # $basedir/rpm/$name.spec (from /etc/oscar/oscar-packager/*.cfg) has priority over
             # $basedir/$name.spec (from source in package.cfg or old svn config)
             my $spec_file = "$basedir/rpm/$name.spec";
-            # We suppose that the specc file is provided from what has been downloaded from /etc/oscar/oscar-packager/*.cfg (often from svn)
+            # We suppose that the spec file is provided from what has been downloaded from /etc/oscar/oscar-packager/*.cfg (often from git)
             if (! -f $spec_file) {
                 # If nothing is found, maybe it's downloaded from package.cfg source field, or from the above config file (old structure).
                 $spec_file = "$basedir/$name.spec";
@@ -976,15 +976,15 @@ sub package_opkg ($$) {
     }
 
     my $pdir = File::Basename::dirname ($build_file);;
-    my $pkg = File::Basename::basename ($pdir);
+#    my $pkg = File::Basename::basename ($pdir);
     if (! -d $pdir) {
         oscar_log(5, ERROR, "Could not locate package location based on $build_file!");
         return -1;
     }
-    if (!OSCAR::Utils::is_a_valid_string ($pkg)) {
-        oscar_log(5, ERROR, "Unable to get the OPKG name");
-        return -1;
-    }
+#    if (!OSCAR::Utils::is_a_valid_string ($pkg)) {
+#        oscar_log(5, ERROR, "Unable to get the OPKG name");
+#        return -1;
+#    }
 
 #    oscar_log(1, SUBSECTION, "Packaging $pkg...");
 
