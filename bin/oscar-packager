@@ -231,7 +231,11 @@ sub create_opkgs_metapkg ($) {
 	    # echo "some/dir/" >> .git/info/sparse-checkout
 	    # echo "another/sub/tree" >> .git/info/sparse-checkout
 	    # git pull origin master
-            $cmd = "mkdir $packaging_dir/opkg-$c; cd $packaging_dir/opkg-$c; git init; git remote add -f origin $url; git config core.sparseCheckout true; echo $subpath >> .git/info/sparse-checkout; git pull origin master";
+            my $sparse_checkout = "";
+	    if (defined $subpath and length $subpath) {
+                $sparse_checkout="git config core.sparseCheckout true; echo $subpath >> .git/info/sparse-checkout;";
+            }
+            $cmd = "mkdir $packaging_dir/opkg-$c; cd $packaging_dir/opkg-$c; git init; git remote add -f origin $url; $sparse_checkout git pull origin master";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
             if (oscar_system $cmd) {
                 oscar_log(1, ERROR, "Failed to build $c");
@@ -413,7 +417,12 @@ sub create_package ($$) {
         } elsif ($method eq OSCAR::Defs::GIT()) {
             # We check out GIT
             $file_type = OSCAR::Defs::GIT();
-	    $cmd = "mkdir $packaging_dir/$c; cd $packaging_dir/$c; git init; git remote add -f origin $url; git config core.sparseCheckout true; echo $subpath >> .git/info/sparse-checkout; git pull origin master";
+            my $sparse_checkout="";
+            if (defined $subpath and length $subpath) {
+                $sparse_checkout="git config core.sparseCheckout true; echo $subpath >> .git/info/sparse-checkout;";
+            }
+
+	    $cmd = "mkdir $packaging_dir/$c; cd $packaging_dir/$c; git init; git remote add -f origin $url; $sparse_checkout git pull origin master";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 10);
             if (oscar_system $cmd) {
                 oscar_log(1, ERROR, "Failed to retreived $c source. Can't build $c.");
