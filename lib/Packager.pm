@@ -287,7 +287,8 @@ sub prepare_rpm_env ($$$$$) {
             $opt .= " --target ".$build_arch;
         }
     }
-    $ENV{RPMBUILDOPTS} = $opt . " --define 'debug_package %{nil}'";
+    $opt .= " --define 'debug_package %{nil}'";
+    $ENV{RPMBUILDOPTS} = $opt;
     if ($opt) {
         oscar_log(5, INFO, "Setting \$RPMBUILDOPTS=$opt...");
     }
