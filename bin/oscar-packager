@@ -574,7 +574,7 @@ sub create_package ($$) {
                 # but at least, we are sure that the tarball name and top dir are correctly named and are
                 # compatible with a rpmbuild -tb (tarbuild) command.
                 if ( defined $tarball ) { # We got a tarball from a spec file Bingo!
-                    $cmd = "rpmbuild -tb $tarball";
+                    $cmd = "rpmbuild -tb $tarball --define 'debug_package %{nil}'";
                     oscar_log(4, INFO, "Building $c rpm package from spec file.");
                     if (run_build_and_move($cmd,$pkg_destdir)) {
                         oscar_log(1, ERROR, "No rpms have been generated for package $c.");
@@ -601,7 +601,7 @@ sub create_package ($$) {
                 }
                 # Here, we are in a SUCCESS situation.
             } elsif ($file_type eq OSCAR::Defs::SRPM()) {
-                $cmd = "rpmbuild --rebuild $filename";
+                $cmd = "rpmbuild --rebuild $filename --define 'debug_package %{nil}'";
                 if (run_build_and_move($cmd,$pkg_destdir)) {
                     oscar_log(1, ERROR, "No rpms have been generated for package $c.");
                     set_failed (\@failed_comp, $c, $category);

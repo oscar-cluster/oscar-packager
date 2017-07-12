@@ -40,10 +40,10 @@ build_srpm () {
    local SPECF=$1
    local SRPM
    if [ -n "$VERBOSE" ]; then
-       echo ">> rpmbuild -bs $SPECF" 1>&2
+       echo ">> rpmbuild -bs $SPECF --define 'debug_package %{nil}'" 1>&2
    fi
    if [ -z "$TEST" ]; then  
-       SRPM=`LC_ALL=C rpmbuild -bs $SPECF | grep ^Wrote: | awk '{print $2}'`
+       SRPM=`LC_ALL=C rpmbuild -bs $SPECF  --define 'debug_package %{nil}' | grep ^Wrote: | awk '{print $2}'`
    fi
    if [ -f $SRPM ]; then
        run_cmd "mv $SRPM ."
@@ -63,7 +63,7 @@ build_rpms () {
 	    TARGET=""
 	    ;;
     esac
-    run_cmd "rpmbuild --rebuild $SRPM $TARGET $RPMBUILDOPTS > $TMPO 2>&1"
+    run_cmd "rpmbuild --rebuild $SRPM $TARGET $RPMBUILDOPTS --define 'debug_package %{nil}' > $TMPO 2>&1"
     if [ $? -ne 0 ]; then
 	echo "EEEE: Building RPMs from $SRPM failed."
 	tail -10 $TMPO
