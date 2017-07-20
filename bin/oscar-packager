@@ -275,7 +275,7 @@ sub create_opkgs_metapkg ($) {
             next;
         }
         my ($compat_dist, @trash) = split ("-", $compat_id);
-        $cmd = "cd $packaging_dir/opkg-$c$subpath;";
+        $cmd = "cd $packaging_dir/opkg-$c/$subpath;";
         $cmd .= "opkgc ";
         $cmd .= " -v" if ($OSCAR::Env::oscar_verbose >=  5);
         $cmd .= " -v" if ($OSCAR::Env::oscar_verbose >= 10);
@@ -481,7 +481,7 @@ sub create_package ($$) {
         # -1 => build was attempted from within prereqs and there was a failure: => abort.
         # 0  => no build attempt was made from prepare_prereqs => we continue.
         # >0 => we had at least one build here: we're ok => next package.
-        my $rc = OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c$subpath", $pkg_destdir);
+        my $rc = OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c/$subpath", $pkg_destdir);
         if($rc == -1) {
             set_failed (\@failed_comp, $c, $category);
             # Stop here: failed to install dependancies and/or build package.
@@ -508,7 +508,7 @@ sub create_package ($$) {
         }
 
         # We enter into the source tree of the package to build.
-        chdir "$packaging_dir/$c$subpath";
+        chdir "$packaging_dir/$c/$subpath";
 
         # We check if a precommand specified by the user needs to be executed
         my $precmd = $$precmds{$c};
