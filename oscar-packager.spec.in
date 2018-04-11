@@ -1,3 +1,5 @@
+%define is_suse %(test -f /etc/SuSE-release && echo 1 || echo 0)
+
 Summary:        OSCAR Packaging helpers.
 Name:           oscar-packager
 Version:        __VERSION__
@@ -14,6 +16,19 @@ Requires:       wget, oscar-base-lib > 6.1.2r7005, rpm-build, subversion
 Requires:       packman, opkgc, createrepo, which
 Requires:	git >= 1.7.0
 Requires:       oscar-base-scripts
+# hostname requirement
+%if 0%{?rhel} == 6
+Requires:	net-tools
+%endif
+%if 0%{?rhel} == 7
+Requires:	hostname
+%endif
+%if 0%{?fedora} > 26
+Requires:	hostname
+%endif
+%if %is_suse
+Requires:	net-tools
+%endif
 
 %description
 Set of scripts and Perl modules for the automatic packaging of the OSCAR.
