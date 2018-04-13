@@ -223,19 +223,21 @@ sub create_opkgs_metapkg ($) {
             }
         } elsif ($method eq OSCAR::Defs::GIT()) {
             # We do sparse checkout in GIT (need git >= 1.7 which is the case since CentOS-6)
-	    # mkdir <repo>
-	    # cd <repo>
-	    # git init
-	    # git remote add -f origin <url>
-	    # git config core.sparseCheckout true
-	    # echo "some/dir/*" >> .git/info/sparse-checkout
-	    # echo "another/sub/tree" >> .git/info/sparse-checkout
-	    # git pull origin master
+            # mkdir <repo>
+            # cd <repo>
+            # git init
+            # git remote add -f origin <url>
+            # git config core.sparseCheckout true
+            # echo "some/dir/*" >> .git/info/sparse-checkout
+            # echo "another/sub/tree" >> .git/info/sparse-checkout
+            # git pull origin master
             my $sparse_checkout = "";
-	    if (defined $subpath and length $subpath) {
-                $sparse_checkout="git config core.sparseCheckout true; echo '$subpath/' >> .git/info/sparse-checkout;";
+            if (defined $subpath and length $subpath) {
+                $sparse_checkout="git config core.sparseCheckout true; echo '$subpath/' >> .git/info/sparse-checkout";
+                $cmd = "mkdir $packaging_dir/opkg-$c; cd $packaging_dir/opkg-$c; git init; git remote add -f origin $url; $sparse_checkout ; git pull origin master";
+            } else {
+                $cmd = "mkdir $packaging_dir; cd $packaging_dir; git clone --depth=1 $url opkg-$c";
             }
-            $cmd = "mkdir $packaging_dir/opkg-$c; cd $packaging_dir/opkg-$c; git init; git remote add -f origin $url; $sparse_checkout git pull origin master";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
             if (oscar_system $cmd) {
                 oscar_log(1, ERROR, "Failed to build $c");
@@ -419,10 +421,12 @@ sub create_package ($$) {
             $file_type = OSCAR::Defs::GIT();
             my $sparse_checkout="";
             if (defined $subpath and length $subpath) {
-                $sparse_checkout="git config core.sparseCheckout true; echo '$subpath/' >> .git/info/sparse-checkout;";
+                $sparse_checkout="git config core.sparseCheckout true; echo '$subpath/' >> .git/info/sparse-checkout";
+                $cmd = "mkdir $packaging_dir/$c; cd $packaging_dir/$c; git init; git remote add -f origin $url; $sparse_checkout ; git pull origin master";
+            } else {
+                $cmd = "mkdir $packaging_dir; cd $packaging_dir; git clone --depth=1 $url";
             }
 
-	    $cmd = "mkdir $packaging_dir/$c; cd $packaging_dir/$c; git init; git remote add -f origin $url; $sparse_checkout git pull origin master";
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 10);
             if (oscar_system $cmd) {
                 oscar_log(1, ERROR, "Failed to retreived $c source. Can't build $c.");
@@ -481,6 +485,8 @@ sub create_package ($$) {
         # -1 => build was attempted from within prereqs and there was a failure: => abort.
         # 0  => no build attempt was made from prepare_prereqs => we continue.
         # >0 => we had at least one build here: we're ok => next package.
+
+	$subpath //= ""; # Avoid $subpath undefined variable error.
         my $rc = OSCAR::Packager::prepare_prereqs ("$packaging_dir/$c/$subpath", $pkg_destdir);
         if($rc == -1) {
             set_failed (\@failed_comp, $c, $category);
