@@ -12,7 +12,7 @@ Group:          Development/Libraries
 Source:         %{name}-%{version}.tar.gz
 BuildRoot:      %{_localstatedir}/tmp/%{name}-root
 BuildArch:      noarch
-Requires:       wget, oscar-base-lib > 6.1.2r7005, rpm-build, subversion
+Requires:       wget, oscar-base-lib > 6.1.2, rpm-build, subversion
 Requires:       packman, opkgc, createrepo, which
 Requires:	git >= 1.7.0
 Requires:       oscar-base-scripts
