@@ -234,9 +234,9 @@ sub create_opkgs_metapkg ($) {
             my $sparse_checkout = "";
             if (defined $subpath and length $subpath) {
                 $sparse_checkout="git config core.sparseCheckout true; echo '$subpath/' >> .git/info/sparse-checkout";
-                $cmd = "mkdir $packaging_dir/opkg-$c; cd $packaging_dir/opkg-$c; git init; git remote add -f origin $url; $sparse_checkout ; git pull origin master";
+                $cmd = "mkdir -p $packaging_dir/opkg-$c; cd $packaging_dir/opkg-$c; git init; git remote add -f origin $url; $sparse_checkout ; git pull origin master";
             } else {
-                $cmd = "mkdir $packaging_dir; cd $packaging_dir; git clone --depth=1 $url opkg-$c";
+                $cmd = "mkdir -p $packaging_dir; cd $packaging_dir; git clone --depth=1 $url opkg-$c";
             }
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose < 10);
             if (oscar_system $cmd) {
@@ -422,9 +422,9 @@ sub create_package ($$) {
             my $sparse_checkout="";
             if (defined $subpath and length $subpath) {
                 $sparse_checkout="git config core.sparseCheckout true; echo '$subpath/' >> .git/info/sparse-checkout";
-                $cmd = "mkdir $packaging_dir/$c; cd $packaging_dir/$c; git init; git remote add -f origin $url; $sparse_checkout ; git pull origin master";
+                $cmd = "mkdir -p $packaging_dir/$c; cd $packaging_dir/$c; git init; git remote add -f origin $url; $sparse_checkout ; git pull origin master";
             } else {
-                $cmd = "mkdir $packaging_dir; cd $packaging_dir; git clone --depth=1 $url";
+                $cmd = "mkdir -p $packaging_dir; cd $packaging_dir; git clone --depth=1 $url";
             }
 
             $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 10);
