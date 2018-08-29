@@ -1,10 +1,19 @@
+oscar-packager is the main oscar distro package builder.
+
+You can use a docker file to bootstrap an oscar devel environment from
+https://github.com/oscar-cluster/oscar/tree/master/support_files/
+(see dockerfile header for usage)
+
+Or you can try to bootstrap your own environment:
+
 = RPM Based System =
 
 In order to use oscar-packager, you will need to install the following 
 components from sources:
-- oscar-base: http://svn.oscar.openclustergroup.org/svn/oscar/trunk
-- packman: http://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/packman/trunk
-- yume: http://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/yume/trunk
+- oscar-base: https://github.com/oscar-cluster/oscar.git
+- packman: https://github.com/oscar-cluster/oscar-packman.git
+- yume: https://github.com/oscar-cluster/oscar-yume.git
+- opkgc: https://github.com/oscar-cluster/oscar-opkgc.git
 
 For each of those components, please check the repository out ("svn co <url>",
 where 'url' is the URL we just gave for each component, and then run the "sudo
@@ -27,9 +36,10 @@ Furthermore, if the oscar configuration file does not exist
 
 In order to use oscar-packager, you will need to install the following
 components from sources:
-- oscar-base: http://svn.oscar.openclustergroup.org/svn/oscar/trunk
-- packman: http://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/packman/trunk
-- rapt: http://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/rapt/trunk
+- oscar-base: https://github.com/oscar-cluster/oscar.git
+- packman: https://github.com/oscar-cluster/oscar-packman.git
+- yume: https://github.com/oscar-cluster/oscar-yume.git
+- opkgc: https://github.com/oscar-cluster/oscar-opkgc.git
 
 For each of those components, please check the repository out ("svn co <url>",
 where 'url' is the URL we just gave for each component, and then run the "sudo
