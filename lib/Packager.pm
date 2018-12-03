@@ -347,7 +347,7 @@ sub run_build_and_move($$) {
         if ($output_line =~ /Wrote: (.*\.rpm$)/) {
             push(@pkgs, $1);
         }
-        if ($output_line =~ /^dpkg-deb: building package .* in `(.*\.deb)'.$/) {
+        if ($output_line =~ /^dpkg-deb: building package .* in .(.*\.deb)'.$/) {
             push(@pkgs, $1);
         }
         print "$output_line\n" if($OSCAR::Env::oscar_verbose >= 10);
