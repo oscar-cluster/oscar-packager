@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 8)
 
 Package: oscar-packager
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depend}, rapt, packman, opkgc, wget, subversion, liboscar, libappconfig-perl, dpkg-dev, debhelper, build-essential
-Build-depends: sgmltools-lite, debhelper (>= 8), make, dpkg-dev (>= 1.13)
+Depends: ${misc:Depends}, rapt, packman, opkgc, wget, subversion, liboscar, libappconfig-perl, dpkg-dev, debhelper, build-essential, ${per:Depends}, bash
+Build-Depends: sgmltools-lite, debhelper (>= 8), make, dpkg-dev (>= 1.13)
 Description: OSCAR Packaging helpers.
  Set of scripts and Perl modules for the automatic packaging of the OSCAR.
