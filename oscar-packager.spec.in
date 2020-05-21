@@ -20,13 +20,13 @@ Requires:       oscar-base-scripts
 %if 0%{?rhel} == 6
 Requires:	net-tools
 %endif
-%if 0%{?rhel} == 7
+%if 0%{?rhel} >= 7
 Requires:	hostname
 %endif
 %if 0%{?fedora} > 26
 Requires:	hostname
 %endif
-%if %is_suse
+%if %is_suse%{is_opensuse}
 Requires:	net-tools
 %endif
 
@@ -47,6 +47,9 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Thu May 21 2020 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.3-1
+- New version that use git c3 instead of tarball.
+- Support for openSuSE Leap 15 and CentOS-8 packaging.
 * Thu Jul 20 2017 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.2-1
 - New version.
 * Wed Jul 12 2017 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.1-1
