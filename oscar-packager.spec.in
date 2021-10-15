@@ -18,6 +18,7 @@ Requires:       wget, oscar-base-lib > 6.1.2, rpm-build, subversion
 Requires:       packman, opkgc, createrepo, which
 Requires:	git >= 1.7.0
 Requires:       oscar-base-scripts
+BuildRequires:	docbook-utils
 # hostname requirement
 %if 0%{?rhel} == 6
 Requires:	net-tools

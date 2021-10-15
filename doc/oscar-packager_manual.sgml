@@ -1,4 +1,4 @@
-<!DOCTYPE article PUBLIC " -//OASIS//DTD DocBook V3.1//EN" "http://oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+<!DOCTYPE article PUBLIC " -//OASIS//DTD DocBook V3.1//EN" "http://www.oasis-open.org/docbook/sgml/3.1/docbookx.dtd">
 
 <article class="whitepaper" id="documentation" lang="en">
 
@@ -47,12 +47,16 @@
     To do that, four configuration files are available:
     <orderedlist>
       <listitem>
+	<para>
         Two configuration files for core packages: one for the stable version
-        and one for the unstable version.
+	and one for the unstable version.
+	</para>
       </listitem>
       <listitem>
+	<para>
         Two configuration files for OPKGs:  one for the stable version
-        and one for the unstable version.
+	and one for the unstable version.
+	</para>
       </listitem>
     </orderedlist>
     Those configuration files describe how to access the source code of the
@@ -83,15 +87,21 @@ source  = svn,http://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/oda/tags/od
     binary packages. Typically, we need to:
     <orderedlist>
       <listitem>
-        know the dependencies required for the creation of the binary package,
+        <para>
+          know the dependencies required for the creation of the binary package,
+        </para>
       </listitem>
       <listitem>
+        <para>
         specify some environment variables needed for the creation of the binary
         package,
+	</para>
       </listitem>
       <listitem>
+        <para>
         where to save the binary packages (the location is different for
         architecture independent and architecture dependent binary packages).
+	</para>
       </listitem>
     </orderedlist>
     To specify this data, each OSCAR component must provide a 
@@ -133,22 +143,30 @@ source  = svn,http://svn.oscar.openclustergroup.org/svn/oscar/pkgsrc/oda/tags/od
 <para>
   <itemizedlist>
     <listitem>
+      <para>
       build_all_rpms: build binary package for all OPKGs (not including the
       meta-packages).
+      </para>
     </listitem>
     <listitem>
+      <para>
       build_opkg_rpms: create the meta-packages for a given list of OPKGs.
+      </para>
     </listitem>
     <listitem>
+      <para>
       build_oscar_rpms: create all binary packages (except meta-packages) for a
       given list of OPKGs, and install them in local repositories.
       This script is based on a build.cfg file that describes how to prepare the
       system for the creation of binary packages and how to create those binary 
       packages.
+      </para>
     </listitem>
     <listitem>
+      <para>
       build_rpms: Script for building RPMs and SRPMS from a source tree
       directory and a spec file.
+      </para>
     </listitem>
   </itemizedlist>
 </para>
