@@ -4,4 +4,4 @@
 	dh $@
 
 override_dh_auto_install:
-	$(MAKE) DESTDIR=$$(pwd)/debian/oscar-packager prefix=/usr install
+	$(MAKE) DESTDIR=$$(pwd)/debian/oscar-packager prefix=/usr install install-doc

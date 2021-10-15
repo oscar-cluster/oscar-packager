@@ -44,6 +44,7 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 
 %files
 %defattr(-,root,root)
+%doc doc/oscar-packager_manual.pdf doc/oscar-packager_manual.html
 %{_bindir}/*
 %{perl_vendorlib}/OSCAR/*
 %{_mandir}/*

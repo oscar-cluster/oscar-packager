@@ -13,6 +13,9 @@ all:
 install:
 	for dir in $(SUBDIRS) ; do ( cd $$dir ; $(MAKE) install ) ; done
 
+install-doc:
+	(cd doc; $(MAKE) install-doc)
+
 uninstall:
 	for dir in $(SUBDIRS) ; do ( cd $$dir ; $(MAKE) uninstall ) ; done
 
