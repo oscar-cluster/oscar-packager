@@ -38,6 +38,7 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 
 %prep
 %setup
+%__make
 
 %install
 %__make install DESTDIR=$RPM_BUILD_ROOT
