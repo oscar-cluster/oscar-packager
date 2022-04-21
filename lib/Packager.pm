@@ -505,12 +505,17 @@ sub create_binary ($$$$$$) {
     my $source_data = OSCAR::ConfigFile::get_value ("$config_file",
                                                     undef,
                                                     "source");
-    
     my $source_type = "";
     my $source_file = "";
     my @src_files = ();
     if($source_data){
         my ($method, $source) = split (",", $source_data, 2);
+	# Now, replace PACKAGER_SOURCES_URL_BASE if needed
+	my $download_url_base = OSCAR::ConfigFile::get_value ("/etc/oscar/oscar.conf",
+                                                              undef,
+                                                              "PACKAGER_SOURCES_URL_BASE");
+	$source =~ s/PACKAGER_SOURCES_URL_BASE/$download_url_base/r;
+
         if (OSCAR::FileUtils::download_file ($source,
                                              $download_dir,
                                              $method,
