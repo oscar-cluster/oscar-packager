@@ -1,3 +1,5 @@
+1.3.4:
+- [ol] Add support for PACKAGER_SOURCES_URL_BASE in /etc/oscar/oscar.conf
 1.3.3:
 - [ol] fix doc generation (use docbook2html instead of sgmltools to generate
 - [ol] add support for SuSE/openSuSE build

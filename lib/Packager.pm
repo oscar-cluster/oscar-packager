@@ -34,6 +34,9 @@ BEGIN {
 use strict;
 use Carp;
 use v5.10.1; # Switch
+require 5.013002; # use Syntax::Construct qw(/r);
+use Syntax::Construct qw(/r);
+
 # Avoid smartmatch warnings when using given
 no if $] >= 5.017011, warnings => 'experimental::smartmatch';
 use vars qw($VERSION @EXPORT);
