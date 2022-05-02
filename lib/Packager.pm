@@ -516,7 +516,7 @@ sub create_binary ($$$$$$) {
 	my $download_url_base = OSCAR::ConfigFile::get_value ("/etc/oscar/oscar.conf",
                                                               undef,
                                                               "PACKAGER_SOURCES_URL_BASE");
-	$source =~ s/PACKAGER_SOURCES_URL_BASE/$download_url_base/r;
+	$source =~ s/PACKAGER_SOURCES_URL_BASE/$download_url_base/g;
 
         if (OSCAR::FileUtils::download_file ($source,
                                              $download_dir,
