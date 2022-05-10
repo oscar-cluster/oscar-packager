@@ -18,16 +18,19 @@ Requires:       wget, oscar-base-lib > 6.1.2, rpm-build, subversion
 Requires:       packman, opkgc, createrepo, which
 Requires:	git >= 1.7.0
 Requires:       oscar-base-scripts
-BuildRequires:	docbook-utils, docbook-utils-pdf
+BuildRequires:	docbook-utils
 # hostname requirement
 %if 0%{?rhel} == 6
 Requires:	net-tools
+Requires:	docbook-utils-pdf
 %endif
 %if 0%{?rhel} >= 7
 Requires:	hostname
+Requires:	docbook-utils-pdf
 %endif
 %if 0%{?fedora} > 26
 Requires:	hostname
+Requires:	docbook-utils-pdf
 %endif
 %if %is_suse
 Requires:	net-tools
