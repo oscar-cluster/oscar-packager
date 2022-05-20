@@ -286,6 +286,7 @@ sub create_opkgs_metapkg ($) {
         $cmd .= " -v" if ($OSCAR::Env::oscar_verbose >=  5);
         $cmd .= " -v" if ($OSCAR::Env::oscar_verbose >= 10);
         $cmd .= " --dist $compat_dist --output $pkg_destdir";
+	$cmd .= "/pool" if ($os->{pkg} eq "deb"); # deb repos needs a pool subdir.
         $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 1);
         OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
         if (oscar_system ($cmd)) {
@@ -552,7 +553,7 @@ sub create_package ($$) {
                     #set_failed (\@failed_comp, $c, $category);
                     next;
                 }
-                if (run_build_and_move($cmd,$pkg_destdir)) {
+                if (run_build_and_move($cmd,$pkg_destdir."/pool")) {
                     set_failed (\@failed_comp, $c, $category);
                     next;
                     # Package build failed, we stop here.

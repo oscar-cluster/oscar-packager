@@ -1,3 +1,5 @@
+1.3.5:
+- [ol] Update to support debian pool subdir in repository when moving files.
 1.3.4:
 - [ol] Add support for PACKAGER_SOURCES_URL_BASE in /etc/oscar/oscar.conf
 1.3.3:

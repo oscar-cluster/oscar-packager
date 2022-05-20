@@ -55,6 +55,8 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Fri May 20 2022 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.5-1
+- Update to support debian pool subdir in repository when moving files.
 * Thu May 21 2020 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.3-1
 - New version that use git c3 instead of tarball.
 - Support for openSuSE Leap 15 and CentOS-8 packaging.
