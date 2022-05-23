@@ -177,17 +177,17 @@ sub create_opkgs_metapkg ($) {
 
 #    oscar_log(1, SUBSECTION, "Creating OPKG meta-packages");
 
-    $pkg_destdir = get_pkg_dest ();
-    if (!defined $pkg_destdir) {
-        oscar_log(5, ERROR, "Impossible to get the destination for packages");
-        return "Unable to get the destination for packages";
-    }
-
     my $os = OSCAR::OCA::OS_Detect::open();
     if (!defined $os) {
         oscar_log(5, ERROR, "Unable to detect the binary package format");
         # FIXME: should return an array of errors, not a string.
         return "OS not detected";
+    }
+
+    $pkg_destdir = get_pkg_dest ();
+    if (!defined $pkg_destdir) {
+        oscar_log(5, ERROR, "Impossible to get the destination for packages");
+        return "Unable to get the destination for packages";
     }
 
     my $cmd;
@@ -286,7 +286,7 @@ sub create_opkgs_metapkg ($) {
         $cmd .= " -v" if ($OSCAR::Env::oscar_verbose >=  5);
         $cmd .= " -v" if ($OSCAR::Env::oscar_verbose >= 10);
         $cmd .= " --dist $compat_dist --output $pkg_destdir";
-	$cmd .= "/pool" if ($os->{pkg} eq "deb"); # deb repos needs a pool subdir.
+	$cmd .= "/pool" if ($os->{pkg} eq "deb");
         $cmd .= " 1>/dev/null 2>/dev/null" if ($OSCAR::Env::oscar_verbose <= 1);
         OSCAR::Logger::oscar_log_subsection "Executing: $cmd";
         if (oscar_system ($cmd)) {
@@ -553,6 +553,7 @@ sub create_package ($$) {
                     #set_failed (\@failed_comp, $c, $category);
                     next;
                 }
+		# On deb repository, packages are in pool subdir.
                 if (run_build_and_move($cmd,$pkg_destdir."/pool")) {
                     set_failed (\@failed_comp, $c, $category);
                     next;
