@@ -554,7 +554,7 @@ sub create_package ($$) {
                     next;
                 }
 		# On deb repository, packages are in pool subdir.
-                if (run_build_and_move($cmd,$pkg_destdir."/pool")) {
+                if (run_build_and_move($cmd,$pkg_destdir)) {
                     set_failed (\@failed_comp, $c, $category);
                     next;
                     # Package build failed, we stop here.
