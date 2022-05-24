@@ -331,6 +331,7 @@ sub move_debfiles($$$) {
 sub run_build_and_move($$) {
     my ($cmd,$output) = @_;
     my @pkgs= ();
+    my $repo_pooldir="";
 
     # Try to run the command and open the pipe.
     # Here, we get command not found errors.
@@ -348,9 +349,11 @@ sub run_build_and_move($$) {
         chomp($output_line);
         if ($output_line =~ /Wrote: (.*\.rpm$)/) {
             push(@pkgs, $1);
+	    $repo_pooldir="";
         }
         if ($output_line =~ /^dpkg-deb: building package .* in .(.*\.deb)'.$/) {
             push(@pkgs, $1);
+	    $repo_pooldir="/pool";
         }
         print "$output_line\n" if($OSCAR::Env::oscar_verbose >= 10);
     }
@@ -376,7 +379,7 @@ sub run_build_and_move($$) {
         chomp($pkg);
         if ( -f $pkg ) {
             # OL: FIXME: would better use perl(rename).
-            $cmd = "mv -f $pkg $output";
+            $cmd = "mv -f $pkg $output$repo_pooldir";
             oscar_log(1, INFO, "Adding " . File::Basename::basename ($pkg) . " to " . File::Basename::basename ($output) . " repo");
             if (oscar_system ($cmd)) {
                 return -1;
