@@ -7,6 +7,6 @@ Build-Depends: docbook-utils, debhelper (>= 8), make, dpkg-dev (>= 1.13)
 
 Package: oscar-packager
 Architecture: all
-Depends: ${misc:Depends}, rapt, packman, opkgc, wget, subversion, liboscar, libappconfig-perl, dpkg-dev, debhelper, build-essential, ${perl:Depends}, bash
+Depends: ${misc:Depends}, rapt, packman, opkgc, wget, subversion, liboscar-server, libappconfig-perl, dpkg-dev, debhelper, build-essential, ${perl:Depends}, bash
 Description: OSCAR Packaging helpers.
  Set of scripts and Perl modules for the automatic packaging of the OSCAR.
