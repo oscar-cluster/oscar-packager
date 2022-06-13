@@ -5,7 +5,7 @@
 Summary:        OSCAR Packaging helpers.
 Name:           oscar-packager
 Version:        __VERSION__
-Release:        1%{?dist}
+Release:        2%{?dist}
 Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
 Distribution:   OSCAR
 Packager:       Olivier Lahaye <olivier.lahaye@cea.fr>
@@ -14,7 +14,7 @@ Group:          Development/Libraries
 Source:         %{name}-%{version}.tar.gz
 BuildRoot:      %{_localstatedir}/tmp/%{name}-root
 BuildArch:      noarch
-Requires:       wget, oscar-base-lib > 6.1.2, rpm-build, subversion
+Requires:       wget, liboscar-server >= 6.3, rpm-build, subversion
 Requires:       packman, opkgc, createrepo, which
 Requires:	git >= 1.7.0
 Requires:       oscar-base-scripts
@@ -55,6 +55,8 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Mon Jun 13 2022 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.5-2
+- adapt deps to new oscar package
 * Fri May 20 2022 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.5-1
 - Update to support debian pool subdir in repository when moving files.
 * Thu May 21 2020 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.3-1
