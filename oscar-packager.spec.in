@@ -17,7 +17,7 @@ BuildArch:      noarch
 Requires:       wget, liboscar-server >= 6.3, rpm-build, subversion
 Requires:       packman, opkgc, createrepo, which
 Requires:	git >= 1.7.0
-Requires:       oscar-base-scripts
+Requires:       oscar-core
 BuildRequires:	docbook-utils
 # hostname requirement
 %if 0%{?rhel} == 6
