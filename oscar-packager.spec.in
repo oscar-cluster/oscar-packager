@@ -26,9 +26,9 @@ BuildRequires:	docbook-utils-pdf
 %endif
 %if 0%{?rhel} >= 7
 Requires:	hostname
-BuildRequires:	texlive-jadetex, texlive-metafont, texlive-modes, texlive-gsftopk,texlive-dvips
+BuildRequires:	texlive-jadetex, texlive-metafont, texlive-modes, texlive-gsftopk, texlive-dvips
 BuildRequires:	tex(expl3.sty), tex(fancyhdr.sty), tex(epstopdf-base.sty)
-BuildRequires:	tex(ecrm1000.tfm), tex(ptmr8t.tfm), tex(pplr8c.tfm)', tex(pplr8r.tfm), tex(pcrr8t.tfm), tex(phvb8t.tfm)
+BuildRequires:	tex(ecrm1000.tfm), tex(ptmr8t.tfm), tex(pplr8c.tfm), tex(pplr8r.tfm), tex(pcrr8t.tfm), tex(phvb8t.tfm)
 %endif
 %if 0%{?fedora} > 26
 Requires:	hostname
