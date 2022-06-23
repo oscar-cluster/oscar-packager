@@ -22,15 +22,13 @@ BuildRequires:	docbook-utils
 # hostname requirement
 %if 0%{?rhel} == 6
 Requires:	net-tools
-Requires:	docbook-utils-pdf
+BuildRequires:	docbook-utils-pdf
 %endif
 %if 0%{?rhel} >= 7
 Requires:	hostname
-Requires:	docbook-utils-pdf
 %endif
 %if 0%{?fedora} > 26
 Requires:	hostname
-Requires:	docbook-utils-pdf
 %endif
 %if %is_suse
 Requires:	net-tools
@@ -55,6 +53,8 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Thu Jun 23 2022 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.5-3
+- adapt deps to move from docbook to jade wrapper
 * Mon Jun 13 2022 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.5-2
 - adapt deps to new oscar package
 * Fri May 20 2022 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.5-1

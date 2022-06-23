@@ -4,11 +4,11 @@ TOPDIR=..
 include $(TOPDIR)/Config.mk
 
 pdf: $(DOCBASE).sgml
-	docbook2pdf -u $(DOCBASE).sgml
+	jw -f docbook -b pdf -u $(DOCBASE).sgml
 	#dblatex  -o $(DOCBASE).pdf $(DOCBASE).sgml
 
 html: $(DOCBASE).sgml
-	docbook2html -u $(DOCBASE).sgml
+	jw -f docbook -b html -u $(DOCBASE).sgml
 	#openjade -V nochunks -t sgml -d /usr/share/sgml/docbook/stylesheet/dsssl/modular/html/docbook.dsl $(DOCBASE).sgml > $(DOCBASE).html
 	#sgmltools -b onehtml $(DOCBASE).sgml
 
