@@ -494,14 +494,14 @@ sub create_binary ($$$$$$) {
  
     # SOURCES dir for package.(used for SRC_DIR precommand variable)
     my $src_dir="";
-    given ( $os->{pkg} ) {
-        when ("rpm") { chomp($src_dir = `/bin/rpm --eval %{_sourcedir}`) }
-        when ("deb") {
-                       $src_dir="$basedir/debian";
-                       mkdir $src_dir if (! -d $src_dir);
-                   }
+    if ($os->{pkg} eq "rpm") {
+        chomp($src_dir = `/bin/rpm --eval %{_sourcedir}`);
+    } elsif ($os->{pkg} eq "deb") {
+        $src_dir="$basedir/debian";
+        mkdir $src_dir if (! -d $src_dir);
+    } else {
         # If not building rpm or deb, we work in basedir.
-        default { $src_dir="$basedir" }
+        $src_dir="$basedir"
     }
 
     # Now, since we can access the config file, we parse it and download the
@@ -1102,30 +1102,22 @@ sub build_tarball_from_dir_spec($$) {
 
     # Now, create the tarball in current directory.
     my $archive_command = "cd $working_directory; ";
-    given ($ext_name) {
-        when (/\.tar\.xz/) {
+        if ($ext_name =~ /\.tar\.xz/) {
             $archive_command .= "tar cpJ --exclude=.svn -f $archive_name $archive_dir";
-        }
-        when (/\.tar\.bz2/) {
+        } elsif ($ext_name =~ /\.tar\.bz2/) {
             $archive_command .= "tar cpj --exclude=.svn -f $archive_name $archive_dir";
-        }
-        when (/\.tar\.gz/) {
+        } elsif ($ext_name =~ /\.tar\.gz/) {
             $archive_command .= "tar cpz --exclude=.svn -f $archive_name $archive_dir";
-        }
-        when (/\.tar\.Z/) {
+        } elsif ($ext_name =~ /\.tar\.Z/) {
             $archive_command .= "tar cpZ --exclude=.svn -f $archive_name $archive_dir";
-        }
-        when (/\.tar$/) {
+        } elsif ($ext_name =~ /\.tar$/) {
             $archive_command .= "tar cp --exclude=.svn -f $archive_name $archive_dir";
-        }
-        when (/\.zip/) {
+        } elsif ($ext_name =~ /\.zip/) {
             $archive_command .= "zip -r $archive_name $archive_dir --exclude .svn";
-        }
-        default {
+        } else {
             oscar_log(5, ERROR, "Archive format not supported for $archive_name");
             return 1;
         }
-    }
 
     if(oscar_system($archive_command)) {
         oscar_log(5, ERROR, "Failed to create $archive_name");
