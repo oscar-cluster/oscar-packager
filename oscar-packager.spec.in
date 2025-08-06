@@ -5,7 +5,7 @@
 Summary:        OSCAR Packaging helpers.
 Name:           oscar-packager
 Version:        __VERSION__
-Release:        2%{?dist}
+Release:        1%{?dist}
 Vendor:         Open Cluster Group <http://OSCAR.OpenClusterGroup.org/>
 Distribution:   OSCAR
 Packager:       Olivier Lahaye <olivier.lahaye@cea.fr>
@@ -16,7 +16,7 @@ BuildRoot:      %{_localstatedir}/tmp/%{name}-root
 BuildArch:      noarch
 Requires:       wget, liboscar-server >= 6.3, rpm-build, subversion
 Requires:       packman, opkgc, createrepo, which
-Requires:	git >= 1.7.0
+Requires:       git >= 1.7.0
 Requires:       oscar-core
 BuildRequires:	docbook-utils
 # hostname requirement
@@ -56,6 +56,8 @@ Set of scripts and Perl modules for the automatic packaging of the OSCAR.
 %{_sysconfdir}/oscar/%{name}/*
 
 %changelog
+* Thu Jun 23 2022 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.6-1
+- New bugfix version
 * Thu Jun 23 2022 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.5-3
 - adapt deps to move from docbook to jade wrapper
 * Mon Jun 13 2022 Olivier Lahaye <olivier.lahaye@cea.fr> 1.3.5-2
